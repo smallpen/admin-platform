@@ -5,11 +5,13 @@ import fastifyCookie from '@fastify/cookie'
 import fastifyHelmet from '@fastify/helmet'
 import fastifyRateLimit from '@fastify/rate-limit'
 import prismaPlugin from './plugins/prisma.plugin.js'
+import schedulerPlugin from './plugins/scheduler.plugin.js'
 import { authRoutes } from './modules/auth/auth.route.js'
 import { usersRoutes } from './modules/users/users.route.js'
 import { rolesRoutes } from './modules/roles/roles.route.js'
 import { permissionsRoutes } from './modules/permissions/permissions.route.js'
 import { statsRoutes } from './modules/stats/stats.route.js'
+import { settingsRoutes } from './modules/settings/settings.route.js'
 import { config } from './config.js'
 
 export async function buildApp() {
@@ -48,12 +50,16 @@ export async function buildApp() {
   // Prisma
   await fastify.register(prismaPlugin)
 
+  // Scheduler (depends on prisma)
+  await fastify.register(schedulerPlugin)
+
   // Routes
   await fastify.register(authRoutes, { prefix: '/api/v1/auth' })
   await fastify.register(usersRoutes, { prefix: '/api/v1/users' })
   await fastify.register(rolesRoutes, { prefix: '/api/v1/roles' })
   await fastify.register(permissionsRoutes, { prefix: '/api/v1/permissions' })
   await fastify.register(statsRoutes, { prefix: '/api/v1/stats' })
+  await fastify.register(settingsRoutes, { prefix: '/api/v1/settings' })
 
   // Health check
   fastify.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }))

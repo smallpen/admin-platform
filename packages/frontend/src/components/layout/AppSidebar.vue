@@ -46,6 +46,15 @@ const menuItems = computed<MenuItem[]>(() => [
       { path: '/permissions', label: t('common.nav.permissions'), show: has('permission:list') },
     ],
   },
+  {
+    key: 'settings',
+    icon: 'Tools',
+    label: t('common.nav.settings'),
+    show: has('settings:view'),
+    children: [
+      { path: '/settings/maintenance', label: t('common.nav.maintenance'), show: has('settings:view') },
+    ],
+  },
 ])
 
 function isActive(path: string) {

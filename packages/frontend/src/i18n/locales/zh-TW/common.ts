@@ -54,5 +54,7 @@ export default {
     permissions: '權限列表',
     logout: '登出',
     profile: '個人資料',
+    settings: '系統設定',
+    maintenance: '網站維護',
   },
 }

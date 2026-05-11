@@ -42,6 +42,11 @@ export async function loginService(fastify: FastifyInstance, username: string, p
     }
   }
 
+  const maintenance = await fastify.prisma.maintenanceStatus.findUnique({ where: { id: 1 } })
+  if (maintenance?.isActive && !permissions.has('settings:maintenance')) {
+    throw new Error('MAINTENANCE_MODE')
+  }
+
   const accessToken = fastify.jwt.sign(
     { sub: user.id },
     { expiresIn: config.JWT_ACCESS_EXPIRES_IN as `${number}${'s' | 'm' | 'h' | 'd'}` }

@@ -93,3 +93,28 @@ model RefreshToken {
 }
 
 // UserStatus values: "ACTIVE" | "INACTIVE" | "LOCKED"
+
+model MaintenanceStatus {
+  id          Int       @id @default(1)
+  isActive    Boolean   @default(false) @map("is_active")
+  activatedAt DateTime? @map("activated_at")
+  activatedBy String?   @map("activated_by")
+  message     String?
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@map("maintenance_status")
+}
+
+model MaintenanceSchedule {
+  id             String    @id @default(cuid())
+  name           String
+  cronExpression String    @map("cron_expression")
+  duration       Int       @default(60)
+  isEnabled      Boolean   @default(true) @map("is_enabled")
+  lastRunAt      DateTime? @map("last_run_at")
+  nextRunAt      DateTime? @map("next_run_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@map("maintenance_schedules")
+}

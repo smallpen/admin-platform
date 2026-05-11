@@ -16,6 +16,9 @@ export async function loginController(request: FastifyRequest, reply: FastifyRep
     }
     return reply.send(ok(result, '登入成功'))
   } catch (e: unknown) {
+    if (e instanceof Error && e.message === 'MAINTENANCE_MODE') {
+      return reply.status(503).send(err('系統目前正在維護中，請稍後再試', 'MAINTENANCE_MODE'))
+    }
     const message = e instanceof Error ? e.message : '登入失敗'
     return reply.status(403).send(err(message, 'ACCOUNT_RESTRICTED'))
   }

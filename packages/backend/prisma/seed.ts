@@ -20,6 +20,9 @@ const PERMISSIONS = [
   { code: 'permission:create', name: '新增權限',     group: 'permission' },
   { code: 'permission:update', name: '編輯權限',     group: 'permission' },
   { code: 'permission:delete', name: '刪除權限',     group: 'permission' },
+  // Settings module
+  { code: 'settings:view',        name: '查看系統設定', group: 'settings' },
+  { code: 'settings:maintenance', name: '管理維護模式', group: 'settings' },
 ]
 
 async function main() {
@@ -93,6 +96,14 @@ async function main() {
     create: { userId: adminUser.id, roleId: superAdminRole.id },
   })
   console.log(`✅ admin user seeded (username: admin, password: Admin@123456)`)
+
+  // Initialize MaintenanceStatus singleton
+  await prisma.maintenanceStatus.upsert({
+    where: { id: 1 },
+    update: {},
+    create: { id: 1, isActive: false },
+  })
+  console.log(`✅ maintenance status initialized`)
 
   console.log('🎉 Seed completed!')
 }

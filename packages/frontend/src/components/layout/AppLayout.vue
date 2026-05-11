@@ -1,11 +1,16 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import AppSidebar from './AppSidebar.vue'
 import AppHeader from './AppHeader.vue'
 import { useBreakpoint } from '@/composables/useBreakpoint'
+import { useMaintenanceStore } from '@/stores/maintenance.store'
 
 const { isMobile } = useBreakpoint()
 const mobileMenuOpen = ref(false)
+
+const maintenanceStore = useMaintenanceStore()
+onMounted(() => maintenanceStore.startPolling())
+onUnmounted(() => maintenanceStore.stopPolling())
 </script>
 
 <template>
