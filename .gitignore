@@ -1,0 +1,46 @@
+node_modules/
+dist/
+build/
+.env
+.env.local
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Prisma
+packages/backend/prisma/migrations/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Vite
+packages/frontend/dist/
+packages/frontend/.vite/
+
+# TypeScript
+*.tsbuildinfo
+
+# Test screenshots & artifacts
+*.png
+*.jpeg
+*.jpg
+.playwright-mcp/
+e2e-test.mjs
+
+# Claude
+.claude/

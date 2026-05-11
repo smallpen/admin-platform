@@ -1,0 +1,38 @@
+{
+  "name": "@admin/frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc -b && vite build",
+    "preview": "vite preview",
+    "type-check": "vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "@admin/shared": "*",
+    "@element-plus/icons-vue": "^2.3.1",
+    "axios": "^1.7.2",
+    "element-plus": "^2.7.6",
+    "jspdf": "^2.5.1",
+    "jspdf-autotable": "^3.8.2",
+    "pinia": "^2.1.7",
+    "vee-validate": "^4.13.2",
+    "vue": "^3.5.12",
+    "vue-i18n": "^9.13.1",
+    "vue-router": "^4.3.3",
+    "vxe-table": "^4.7.46",
+    "xe-utils": "^3.5.29",
+    "zod": "^3.23.8",
+    "@vee-validate/zod": "^4.13.2"
+  },
+  "devDependencies": {
+    "@types/jspdf": "^2.0.0",
+    "@vitejs/plugin-vue": "^5.1.4",
+    "typescript": "~5.6.2",
+    "unplugin-auto-import": "^0.18.2",
+    "unplugin-vue-components": "^0.27.3",
+    "vite": "^5.4.10",
+    "vue-tsc": "^2.1.8"
+  }
+}

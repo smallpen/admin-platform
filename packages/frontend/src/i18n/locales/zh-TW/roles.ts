@@ -1,0 +1,25 @@
+export default {
+  title: '角色管理',
+  columns: {
+    name: '角色識別碼',
+    displayName: '角色名稱',
+    description: '描述',
+    isSystem: '系統角色',
+    userCount: '使用者數',
+    permissionCount: '權限數',
+    createdAt: '建立時間',
+  },
+  form: {
+    createTitle: '新增角色',
+    editTitle: '編輯角色',
+    name: '角色識別碼',
+    namePlaceholder: '請輸入角色識別碼（小寫英文及底線）',
+    displayName: '角色名稱',
+    displayNamePlaceholder: '請輸入角色名稱',
+    description: '描述',
+    descriptionPlaceholder: '請輸入角色描述（選填）',
+  },
+  system: '系統',
+  custom: '自訂',
+  assignPermissionsTitle: '指派權限',
+}
