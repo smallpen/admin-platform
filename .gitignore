@@ -8,8 +8,10 @@ build/
 *.db-wal
 *.db-shm
 
-# Prisma
-packages/backend/prisma/migrations/
+# Prisma (migrations 需納入版本控制以支援 Docker 部署)
+# packages/backend/prisma/migrations/
+packages/backend/prisma/*.db
+packages/backend/prisma/*.db-journal
 
 # Logs
 logs/
