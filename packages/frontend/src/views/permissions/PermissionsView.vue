@@ -52,13 +52,13 @@ const actions: TableAction[] = [
 ]
 
 // 將分組結構展平成 BaseTable 所需的列表格式
-async function fetchPermissions() {
+async function fetchPermissions(_params?: unknown) {
   const { data } = await permissionsApi.list()
   const groups: PermissionGroup[] = data.data
   const flatList: Permission[] = groups.flatMap(g => g.permissions)
   return {
     data: {
-      success: true,
+      success: true as const,
       data: flatList,
       pagination: { page: 1, pageSize: flatList.length, total: flatList.length, totalPages: 1 },
     },

@@ -35,9 +35,10 @@ const editSchema = toTypedSchema(z.object({
   description: z.string().optional(),
 }))
 
-const { handleSubmit, errors, resetForm, setValues } = useForm({
+const { handleSubmit, errors: _errors, resetForm, setValues } = useForm({
   validationSchema: computed(() => isEdit.value ? editSchema : createSchema),
 })
+const errors = _errors as unknown as Record<string, string | undefined>
 const { value: name } = useField<string>('name')
 const { value: displayName } = useField<string>('displayName')
 const { value: description } = useField<string>('description')
@@ -67,7 +68,7 @@ const onConfirm = handleSubmit(async (values) => {
       })
       await rolesApi.assignPermissions(props.role.id, { permissionIds: selectedPermissionIds.value })
     } else {
-      const { data } = await rolesApi.create({
+      await rolesApi.create({
         name: (values as any).name,
         displayName: values.displayName,
         description: values.description,

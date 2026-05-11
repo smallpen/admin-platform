@@ -2,7 +2,6 @@ import { useAuthStore } from '@/stores/auth.store'
 import { usePermissionStore } from '@/stores/permission.store'
 import { authApi } from '@/api/modules/auth.api'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
 
 export function useAuth() {
   const authStore = useAuthStore()

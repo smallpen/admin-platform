@@ -8,6 +8,8 @@ COPY packages/shared/package.json   ./packages/shared/
 COPY packages/backend/package.json  ./packages/backend/
 COPY packages/frontend/package.json ./packages/frontend/
 
+RUN apk add --no-cache openssl
+
 RUN npm ci
 
 # Copy source
@@ -17,6 +19,7 @@ COPY packages/backend ./packages/backend
 # Generate Prisma client & compile backend
 RUN cd packages/backend && npx prisma generate
 RUN npm run build -w packages/backend
+RUN cd packages/backend && npx tsup prisma/seed.ts --format esm --out-dir dist --no-dts
 
 # ─── Stage 2: Production ──────────────────────────────────────────────────────
 FROM node:20-alpine AS production
@@ -24,7 +27,7 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-RUN apk add --no-cache dumb-init
+RUN apk add --no-cache dumb-init openssl
 
 # Workspace manifests (needed for npm ci workspace resolution)
 COPY package.json package-lock.json ./

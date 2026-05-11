@@ -56,11 +56,11 @@ const actions: TableAction[] = [
 ]
 
 // Roles API doesn't paginate — wrap it for BaseTable compatibility
-async function fetchRoles() {
+async function fetchRoles(_params?: unknown) {
   const { data } = await rolesApi.list()
   return {
     data: {
-      success: true,
+      success: true as const,
       data: data.data,
       pagination: { page: 1, pageSize: data.data.length, total: data.data.length, totalPages: 1 },
     },

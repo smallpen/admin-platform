@@ -40,7 +40,8 @@ const editSchema = z.object({
 
 const schema = computed(() => toTypedSchema(isEdit.value ? editSchema : createSchema))
 
-const { handleSubmit, errors, resetForm, setValues } = useForm({ validationSchema: schema })
+const { handleSubmit, errors: _errors, resetForm, setValues } = useForm({ validationSchema: schema })
+const errors = _errors as unknown as Record<string, string | undefined>
 const { value: username } = useField<string>('username')
 const { value: email } = useField<string>('email')
 const { value: password } = useField<string>('password')

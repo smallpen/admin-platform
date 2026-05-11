@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { EditPen, Key, Delete } from '@element-plus/icons-vue'
 import BaseTable from '@/components/base/BaseTable.vue'
 import BaseStatusTag from '@/components/base/BaseStatusTag.vue'

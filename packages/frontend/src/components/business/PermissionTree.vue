@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 import { permissionsApi } from '@/api/modules/permissions.api'
 import type { PermissionGroup } from '@admin/shared'
 
@@ -62,7 +62,7 @@ loadPermissions()
         <el-checkbox
           :model-value="isGroupAllChecked(group)"
           :indeterminate="isGroupIndeterminate(group)"
-          @change="(val: boolean) => toggleGroup(group, val)"
+          @change="(val: unknown) => toggleGroup(group, Boolean(val))"
         >
           <span class="group-name">{{ group.group }}</span>
         </el-checkbox>
@@ -72,7 +72,7 @@ loadPermissions()
           v-for="perm in group.permissions"
           :key="perm.id"
           :model-value="selectedIds.includes(perm.id)"
-          @change="(val: boolean) => togglePermission(perm.id, val)"
+          @change="(val: unknown) => togglePermission(perm.id, Boolean(val))"
         >
           {{ perm.name }}
         </el-checkbox>

@@ -3,7 +3,7 @@ import { ref, onMounted } from 'vue'
 import type { Component } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
 import { useTable, type UseTableOptions } from '@/composables/useTable'
-import { ElMessageBox, ElMessage } from 'element-plus'
+import { ElMessageBox } from 'element-plus'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { useI18n } from 'vue-i18n'
@@ -18,14 +18,14 @@ export interface TableColumn {
   slotName?: string
 }
 
-export interface TableAction {
+export interface TableAction<TRow = any> {
   label: string
   type?: 'primary' | 'success' | 'warning' | 'danger' | 'info'
   permission?: string
   icon?: Component
-  handler: (row: T) => void
+  handler: (row: TRow) => void
   confirm?: string
-  show?: (row: T) => boolean
+  show?: (row: TRow) => boolean
 }
 
 const props = withDefaults(defineProps<{

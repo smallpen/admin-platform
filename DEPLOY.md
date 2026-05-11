@@ -129,12 +129,12 @@ admin-frontend    running
 ### 2.5 初始化資料庫 Seed（只需執行一次）
 
 ```bash
-docker compose exec backend sh -c "cd /app && node_modules/.bin/tsx packages/backend/prisma/seed.ts"
+docker compose exec backend sh -c "node packages/backend/dist/seed.js"
 ```
 
 執行完成後，預設帳號：
 - **帳號**：`admin`
-- **密碼**：`admin@123456`
+- **密碼**：`Admin@123456`
 
 > ⚠️ 部署後請立即登入並修改密碼！
 
@@ -354,5 +354,5 @@ docker compose exec backend sh -c "sqlite3 /data/app.db 'PRAGMA integrity_check;
 ```bash
 # 警告：這會清除所有資料！
 docker compose exec backend sh -c "cd /app && node_modules/.bin/prisma migrate reset --schema=packages/backend/prisma/schema.prisma --force"
-docker compose exec backend sh -c "cd /app && node_modules/.bin/tsx packages/backend/prisma/seed.ts"
+docker compose exec backend sh -c "node packages/backend/dist/seed.js"
 ```
