@@ -5,11 +5,31 @@
 Vue 3 + Fastify monorepo 後台管理系統，採用 RBAC 角色權限架構。
 
 - **前端**：`packages/frontend` — Vue 3 + Vite + TypeScript + Element Plus + vxe-table
-- **後端**：`packages/backend` — Fastify + Prisma + SQLite
+- **後端**：`packages/backend` — Fastify + Prisma + MySQL 8.0
 - **共用型別**：`packages/shared`
 
 啟動指令：根目錄執行 `npm run dev`（同時啟動前後端）
-預設帳號：`admin` / `admin@123456`，後端 `http://localhost:3000`，前端 `http://localhost:5173`
+預設帳號：`admin` / `Admin@123456`，後端 `http://localhost:3001`，前端 `http://localhost:5173`
+
+### 資料庫（MySQL 8.0）
+
+本機開發需先啟動 MySQL container：
+
+```bash
+docker compose -f docker-compose.dev.yml up -d
+```
+
+連線設定（`packages/backend/.env`）：
+
+```dotenv
+DATABASE_URL="mysql://admin:admin_password@localhost:3306/admin_platform?charset=utf8mb4"
+```
+
+- Collation：`utf8mb4_unicode_ci`（`contains` 查詢大小寫不敏感）
+- `RefreshToken.token`：`VARCHAR(512)`（JWT 長度需求）
+- `Advertisement.imageData`：`LONGBLOB`（圖片二進制）
+- Migration 指令：`npm run db:migrate -w packages/backend`
+- Seed 指令：`npm run db:seed -w packages/backend`
 
 ---
 
