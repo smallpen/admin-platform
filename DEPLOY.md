@@ -1,13 +1,14 @@
 # Docker 部署指南
 
-本系統採用 Docker Compose 進行容器化部署，包含兩個服務：
+本系統採用 Docker Compose 進行容器化部署，包含三個服務：
 
 | 容器 | 說明 |
 |------|------|
-| `admin-frontend` | Nginx 靜態伺服器，提供 Vue 3 前端 + 反向代理 API |
+| `admin-mysql`    | MySQL 8.0 資料庫伺服器 |
 | `admin-backend`  | Node.js (Fastify) API 伺服器 |
+| `admin-frontend` | Nginx 靜態伺服器，提供 Vue 3 前端 + 反向代理 API |
 
-資料庫（SQLite）透過 Docker Volume `db-data` 持久化儲存。
+資料庫（MySQL 8.0）透過 Docker Volume `mysql-data` 持久化儲存。
 
 ```
 Internet
@@ -20,7 +21,11 @@ Internet
          │ :3001
 ┌────────▼─────────┐
 │  admin-backend   │  (Fastify)
-│  /data/app.db    │──── Volume: db-data
+└────────┬─────────┘
+         │ :3306
+┌────────▼─────────┐
+│  admin-mysql     │  (MySQL 8.0)
+│  mysql-data vol  │──── Volume: mysql-data
 └──────────────────┘
 ```
 
@@ -65,13 +70,17 @@ cd admin-platform
 cp .env.example .env
 ```
 
-編輯 `.env`，**至少修改以下三個必填項**：
+編輯 `.env`，**至少修改以下五個必填項**：
 
 ```bash
 nano .env
 ```
 
 ```dotenv
+# MySQL 資料庫密碼（必須設定）
+MYSQL_ROOT_PASSWORD=<強密碼>
+MYSQL_PASSWORD=<強密碼>
+
 # 生產環境 JWT 密鑰（必須修改，至少 32 字元）
 JWT_ACCESS_SECRET=<使用以下指令產生>
 JWT_REFRESH_SECRET=<使用以下指令產生>
@@ -88,17 +97,21 @@ node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 
 執行兩次，分別填入 `JWT_ACCESS_SECRET` 和 `JWT_REFRESH_SECRET`。
 
-### 2.3 產生資料庫 Migration 檔案（首次必做）
+### 2.3 確認 Migration 檔案已存在
 
-Migration 檔案需要在本機先產生並 commit 到 git，容器才能執行 `prisma migrate deploy`。
+Migration 檔案需 commit 到 git，容器才能執行 `prisma migrate deploy`。
 
 ```bash
-# 本機需有 Node.js 環境
-npm install
-npm run db:migrate      # 輸入 migration 名稱，例如：init
-
-# 確認 migration 資料夾已產生
+# 確認 migration 資料夾已存在
 ls packages/backend/prisma/migrations/
+```
+
+若資料夾不存在（首次 clone 後缺少），需在本機產生：
+
+```bash
+# 本機需有 Node.js 環境與可連線的 MySQL
+npm install
+npm run db:migrate -w packages/backend   # 輸入名稱，例如：init_mysql
 
 # commit migration 到 git
 git add packages/backend/prisma/migrations/
@@ -114,7 +127,7 @@ git push
 # 第一次建構（需要較長時間下載 base image + 安裝依賴）
 docker compose up -d --build
 
-# 查看啟動狀態
+# 查看啟動狀態（mysql 需先 healthy 才會啟動 backend）
 docker compose ps
 ```
 
@@ -122,6 +135,7 @@ docker compose ps
 
 ```
 NAME              STATUS
+admin-mysql       running (healthy)
 admin-backend     running (healthy)
 admin-frontend    running
 ```
@@ -154,6 +168,8 @@ http://your-server-ip
 
 | 變數名稱 | 必填 | 預設值 | 說明 |
 |---------|------|--------|------|
+| `MYSQL_ROOT_PASSWORD` | ✅ | — | MySQL root 密碼 |
+| `MYSQL_PASSWORD` | ✅ | — | MySQL admin 使用者密碼 |
 | `JWT_ACCESS_SECRET` | ✅ | — | Access Token 簽署密鑰（最少 32 字元）|
 | `JWT_REFRESH_SECRET` | ✅ | — | Refresh Token 簽署密鑰（最少 32 字元）|
 | `CORS_ORIGIN` | ✅ | `http://localhost` | 允許的前端來源 URL |
@@ -173,6 +189,9 @@ docker compose logs -f
 
 # 只看後端
 docker compose logs -f backend
+
+# 只看 MySQL
+docker compose logs -f mysql
 
 # 只看前端
 docker compose logs -f frontend
@@ -211,7 +230,7 @@ docker compose down -v
 # 1. 拉取最新程式碼
 git pull origin main
 
-# 2. 重新建構並重啟（零停機時間較短）
+# 2. 重新建構並重啟
 docker compose up -d --build
 
 # 3. 若有新 migration，容器重啟時會自動執行 prisma migrate deploy
@@ -221,27 +240,30 @@ docker compose up -d --build
 
 ## 六、資料備份與還原
 
-### 6.1 備份 SQLite 資料庫
+### 6.1 備份 MySQL 資料庫
 
 ```bash
 # 建立備份資料夾
 mkdir -p ~/backups
 
-# 備份（複製 volume 內的檔案）
-docker compose exec backend sh -c "cp /data/app.db /tmp/backup-$(date +%Y%m%d).db"
-docker cp admin-backend:/tmp/backup-$(date +%Y%m%d).db ~/backups/
+# 使用 mysqldump 備份（需輸入 MYSQL_PASSWORD）
+docker compose exec mysql sh -c \
+  "mysqldump -u admin -p'${MYSQL_PASSWORD}' admin_platform" \
+  > ~/backups/backup-$(date +%Y%m%d).sql
 ```
 
 ### 6.2 還原資料庫
 
 ```bash
-# 停止服務
+# 停止後端（避免寫入衝突）
 docker compose stop backend
 
-# 複製備份進容器
-docker cp ~/backups/backup-YYYYMMDD.db admin-backend:/data/app.db
+# 還原
+docker compose exec -T mysql sh -c \
+  "mysql -u admin -p'${MYSQL_PASSWORD}' admin_platform" \
+  < ~/backups/backup-YYYYMMDD.sql
 
-# 重啟
+# 重啟後端
 docker compose start backend
 ```
 
@@ -254,7 +276,7 @@ crontab -e
 加入（每天凌晨 3 點備份，保留 30 天）：
 
 ```cron
-0 3 * * * docker compose -f /path/to/admin-platform/docker-compose.yml exec -T backend sh -c "cp /data/app.db /tmp/app-\$(date +\%Y\%m\%d).db" && docker cp admin-backend:/tmp/app-\$(date +\%Y\%m\%d).db /path/to/backups/ && find /path/to/backups/ -name "app-*.db" -mtime +30 -delete
+0 3 * * * cd /path/to/admin-platform && docker compose exec -T mysql sh -c "mysqldump -u admin -p\${MYSQL_PASSWORD} admin_platform" > /path/to/backups/backup-$(date +\%Y\%m\%d).sql && find /path/to/backups/ -name "backup-*.sql" -mtime +30 -delete
 ```
 
 ---
@@ -324,12 +346,26 @@ docker compose up -d --build
 ```bash
 # 查看詳細錯誤
 docker compose logs backend
+docker compose logs mysql
 ```
 
 常見原因：
 - `.env` 未設定或 `JWT_ACCESS_SECRET` 不足 32 字元
+- `.env` 缺少 `MYSQL_ROOT_PASSWORD` 或 `MYSQL_PASSWORD`
 - Migration 檔案不存在（見 2.3）
 - Port 80 已被主機其他程序佔用
+
+### MySQL 未就緒導致 backend 連線失敗
+
+backend 依賴 mysql 的 healthcheck，若 mysql 啟動慢，backend 會等待。若持續失敗：
+
+```bash
+# 確認 mysql container 狀態
+docker compose ps mysql
+
+# 手動測試 MySQL 連線
+docker compose exec mysql mysqladmin ping -h 127.0.0.1 -u admin --password=$MYSQL_PASSWORD
+```
 
 ### Port 衝突
 
@@ -342,17 +378,19 @@ HTTP_PORT=8080
 docker compose up -d
 ```
 
-### 資料庫損壞
+### 資料庫完整性檢查
 
 ```bash
-# 進入容器執行 SQLite 完整性檢查
-docker compose exec backend sh -c "sqlite3 /data/app.db 'PRAGMA integrity_check;'"
+# 連入 MySQL 執行檢查
+docker compose exec mysql sh -c \
+  "mysqlcheck -u admin -p'${MYSQL_PASSWORD}' --all-databases"
 ```
 
 ### 重新 Seed（清空重來）
 
 ```bash
 # 警告：這會清除所有資料！
-docker compose exec backend sh -c "cd /app && node_modules/.bin/prisma migrate reset --schema=packages/backend/prisma/schema.prisma --force"
+docker compose exec backend sh -c \
+  "node_modules/.bin/prisma migrate reset --schema=packages/backend/prisma/schema.prisma --force"
 docker compose exec backend sh -c "node packages/backend/dist/seed.js"
 ```

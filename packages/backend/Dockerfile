@@ -48,9 +48,6 @@ COPY --from=builder /app/packages/backend/dist        ./packages/backend/dist
 COPY packages/backend/prisma                          ./packages/backend/prisma
 COPY --from=builder /app/node_modules/.prisma         ./node_modules/.prisma
 
-# Volume mount point for SQLite file
-RUN mkdir -p /data
-
 EXPOSE 3001
 
 ENTRYPOINT ["dumb-init", "--"]

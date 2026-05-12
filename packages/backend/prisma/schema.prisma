@@ -3,9 +3,8 @@ generator client {
   binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
-// Switch provider to "postgresql" for production
 datasource db {
-  provider = "sqlite"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -80,7 +79,7 @@ model RolePermission {
 
 model RefreshToken {
   id        String    @id @default(cuid())
-  token     String    @unique
+  token     String    @unique @db.VarChar(512)
   userId    String    @map("user_id")
   expiresAt DateTime  @map("expires_at")
   createdAt DateTime  @default(now()) @map("created_at")
@@ -122,7 +121,7 @@ model MaintenanceSchedule {
 model Advertisement {
   id        String   @id @default(cuid())
   title     String
-  imageData Bytes    @map("image_data")
+  imageData Bytes    @map("image_data") @db.LongBlob
   mimeType  String   @map("mime_type")
   imageName String   @map("image_name")
   linkUrl   String?  @map("link_url")
