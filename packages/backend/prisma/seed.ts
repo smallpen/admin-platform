@@ -23,6 +23,11 @@ const PERMISSIONS = [
   // Settings module
   { code: 'settings:view',        name: '查看系統設定', group: 'settings' },
   { code: 'settings:maintenance', name: '管理維護模式', group: 'settings' },
+  // Ad module
+  { code: 'ad:list',   name: '查看廣告列表', group: 'ad' },
+  { code: 'ad:create', name: '新增廣告',     group: 'ad' },
+  { code: 'ad:update', name: '編輯廣告',     group: 'ad' },
+  { code: 'ad:delete', name: '刪除廣告',     group: 'ad' },
 ]
 
 async function main() {

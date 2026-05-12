@@ -118,3 +118,21 @@ model MaintenanceSchedule {
 
   @@map("maintenance_schedules")
 }
+
+model Advertisement {
+  id        String   @id @default(cuid())
+  title     String
+  imageData Bytes    @map("image_data")
+  mimeType  String   @map("mime_type")
+  imageName String   @map("image_name")
+  linkUrl   String?  @map("link_url")
+  duration  Int      @default(5)
+  isActive  Boolean  @default(true) @map("is_active")
+  startDate DateTime @map("start_date")
+  endDate   DateTime @map("end_date")
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("advertisements")
+}

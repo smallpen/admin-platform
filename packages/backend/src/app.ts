@@ -12,6 +12,7 @@ import { rolesRoutes } from './modules/roles/roles.route.js'
 import { permissionsRoutes } from './modules/permissions/permissions.route.js'
 import { statsRoutes } from './modules/stats/stats.route.js'
 import { settingsRoutes } from './modules/settings/settings.route.js'
+import { adsRoutes } from './modules/ads/ads.route.js'
 import { config } from './config.js'
 
 export async function buildApp() {
@@ -60,6 +61,7 @@ export async function buildApp() {
   await fastify.register(permissionsRoutes, { prefix: '/api/v1/permissions' })
   await fastify.register(statsRoutes, { prefix: '/api/v1/stats' })
   await fastify.register(settingsRoutes, { prefix: '/api/v1/settings' })
+  await fastify.register(adsRoutes, { prefix: '/api/v1/ads' })
 
   // Health check
   fastify.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }))

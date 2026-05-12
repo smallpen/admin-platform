@@ -56,5 +56,7 @@ export default {
     profile: '個人資料',
     settings: '系統設定',
     maintenance: '網站維護',
+    website: '網站管理',
+    ads: '廣告列表',
   },
 }

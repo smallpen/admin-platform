@@ -55,6 +55,15 @@ const menuItems = computed<MenuItem[]>(() => [
       { path: '/settings/maintenance', label: t('common.nav.maintenance'), show: has('settings:view') },
     ],
   },
+  {
+    key: 'website',
+    icon: 'Monitor',
+    label: t('common.nav.website'),
+    show: has('ad:list'),
+    children: [
+      { path: '/website/ads', label: t('common.nav.ads'), show: has('ad:list') },
+    ],
+  },
 ])
 
 function isActive(path: string) {
