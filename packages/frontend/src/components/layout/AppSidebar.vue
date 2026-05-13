@@ -64,6 +64,17 @@ const menuItems = computed<MenuItem[]>(() => [
       { path: '/website/ads', label: t('common.nav.ads'), show: has('ad:list') },
     ],
   },
+  {
+    key: 'api-management',
+    icon: 'Connection',
+    label: t('common.nav.apiManagement'),
+    show: has('proxy_api:list') || has('api_key:list') || has('api_log:list'),
+    children: [
+      { path: '/api-management/apis',     label: t('common.nav.proxyApis'), show: has('proxy_api:list') },
+      { path: '/api-management/api-keys', label: t('common.nav.apiKeys'),   show: has('api_key:list') },
+      { path: '/api-management/api-logs', label: t('common.nav.apiLogs'),   show: has('api_log:list') },
+    ],
+  },
 ])
 
 function isActive(path: string) {

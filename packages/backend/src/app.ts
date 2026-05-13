@@ -13,6 +13,8 @@ import { permissionsRoutes } from './modules/permissions/permissions.route.js'
 import { statsRoutes } from './modules/stats/stats.route.js'
 import { settingsRoutes } from './modules/settings/settings.route.js'
 import { adsRoutes } from './modules/ads/ads.route.js'
+import { proxyAdminRoutes } from './modules/proxy/proxy-admin.route.js'
+import { proxyExecuteRoutes } from './modules/proxy/proxy-execute.route.js'
 import { config } from './config.js'
 
 export async function buildApp() {
@@ -62,6 +64,8 @@ export async function buildApp() {
   await fastify.register(statsRoutes, { prefix: '/api/v1/stats' })
   await fastify.register(settingsRoutes, { prefix: '/api/v1/settings' })
   await fastify.register(adsRoutes, { prefix: '/api/v1/ads' })
+  await fastify.register(proxyAdminRoutes, { prefix: '/api/v1' })
+  await fastify.register(proxyExecuteRoutes, { prefix: '/api/proxy' })
 
   // Health check
   fastify.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }))

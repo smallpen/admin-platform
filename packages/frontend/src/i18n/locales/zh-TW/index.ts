@@ -5,5 +5,6 @@ import roles from './roles'
 import permissions from './permissions'
 import settings from './settings'
 import ads from './ads'
+import proxy from './proxy'
 
-export default { common, auth, users, roles, permissions, settings, ads }
+export default { common, auth, users, roles, permissions, settings, ads, proxy }

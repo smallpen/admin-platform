@@ -5,6 +5,7 @@ import { usersRoutes } from './routes/users.routes'
 import { rolesRoutes } from './routes/roles.routes'
 import { settingsRoutes, maintenancePageRoute } from './routes/settings.routes'
 import { adsRoutes } from './routes/ads.routes'
+import { proxyRoutes } from './routes/proxy.routes'
 import { setupGuards } from './guards'
 
 const router = createRouter({
@@ -21,6 +22,7 @@ const router = createRouter({
         ...rolesRoutes,
         ...settingsRoutes,
         ...adsRoutes,
+        ...proxyRoutes,
       ],
     },
     maintenancePageRoute,

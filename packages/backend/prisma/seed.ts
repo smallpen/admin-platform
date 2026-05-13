@@ -28,6 +28,18 @@ const PERMISSIONS = [
   { code: 'ad:create', name: '新增廣告',     group: 'ad' },
   { code: 'ad:update', name: '編輯廣告',     group: 'ad' },
   { code: 'ad:delete', name: '刪除廣告',     group: 'ad' },
+  // Proxy API module
+  { code: 'proxy_api:list',   name: '查看代理 API 列表', group: 'proxy_api' },
+  { code: 'proxy_api:create', name: '新增代理 API',       group: 'proxy_api' },
+  { code: 'proxy_api:update', name: '編輯代理 API',       group: 'proxy_api' },
+  { code: 'proxy_api:delete', name: '刪除代理 API',       group: 'proxy_api' },
+  // API Key module
+  { code: 'api_key:list',   name: '查看 API Key 列表', group: 'api_key' },
+  { code: 'api_key:create', name: '新增 API Key',       group: 'api_key' },
+  { code: 'api_key:update', name: '編輯 API Key',       group: 'api_key' },
+  { code: 'api_key:delete', name: '刪除 API Key',       group: 'api_key' },
+  // API Log module
+  { code: 'api_log:list', name: '查看 API 歷程記錄', group: 'api_log' },
 ]
 
 async function main() {

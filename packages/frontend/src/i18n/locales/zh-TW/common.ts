@@ -58,5 +58,9 @@ export default {
     maintenance: '網站維護',
     website: '網站管理',
     ads: '廣告列表',
+    apiManagement: 'API 管理',
+    proxyApis: 'API 列表',
+    apiKeys: 'API KEY 管理',
+    apiLogs: 'API 歷程記錄',
   },
 }
