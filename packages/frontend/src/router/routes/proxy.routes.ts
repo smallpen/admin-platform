@@ -33,4 +33,13 @@ export const proxyRoutes = [
       title: 'API 歷程記錄',
     },
   },
+  {
+    path: '/api-management/docs',
+    name: 'ApiDocs',
+    component: () => import('@/views/api-management/ApiDocsView.vue'),
+    meta: {
+      requiresAuth: true,
+      title: 'API 使用說明',
+    },
+  },
 ]

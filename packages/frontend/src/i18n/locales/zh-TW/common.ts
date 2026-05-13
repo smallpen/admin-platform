@@ -62,5 +62,6 @@ export default {
     proxyApis: 'API 列表',
     apiKeys: 'API KEY 管理',
     apiLogs: 'API 歷程記錄',
+    apiDocs: 'API 使用說明',
   },
 }

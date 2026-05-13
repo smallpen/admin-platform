@@ -73,6 +73,7 @@ const menuItems = computed<MenuItem[]>(() => [
       { path: '/api-management/apis',     label: t('common.nav.proxyApis'), show: has('proxy_api:list') },
       { path: '/api-management/api-keys', label: t('common.nav.apiKeys'),   show: has('api_key:list') },
       { path: '/api-management/api-logs', label: t('common.nav.apiLogs'),   show: has('api_log:list') },
+      { path: '/api-management/docs',     label: t('common.nav.apiDocs'),   show: true },
     ],
   },
 ])
