@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { createHash, randomBytes } from 'crypto'
 import { buildPagination } from '../../utils/response.js'
+import { createActivityLog, type ActivityContext } from '../../utils/activity-log.js'
 
 export interface ProxyApiListQuery {
   page: number
@@ -155,15 +156,26 @@ export async function getProxyApiService(fastify: FastifyInstance, id: string) {
   return formatProxyApi(api)
 }
 
-export async function createProxyApiService(fastify: FastifyInstance, input: CreateProxyApiInput) {
+export async function createProxyApiService(fastify: FastifyInstance, input: CreateProxyApiInput, ctx: ActivityContext) {
   const existing = await fastify.prisma.proxyApi.findUnique({ where: { path: input.path } })
   if (existing) throw new Error('此 API 路徑已存在')
 
   const api = await fastify.prisma.proxyApi.create({ data: input as any })
-  return formatProxyApi(api)
+  const formatted = formatProxyApi(api)
+
+  await createActivityLog(fastify, {
+    ctx,
+    action: 'CREATE',
+    module: 'proxy_api',
+    targetId:   api.id,
+    targetName: api.name,
+    after: formatted as any,
+  })
+
+  return formatted
 }
 
-export async function updateProxyApiService(fastify: FastifyInstance, id: string, input: Partial<CreateProxyApiInput>) {
+export async function updateProxyApiService(fastify: FastifyInstance, id: string, input: Partial<CreateProxyApiInput>, ctx: ActivityContext) {
   const existing = await fastify.prisma.proxyApi.findUnique({ where: { id } })
   if (!existing) throw new Error('NOT_FOUND')
 
@@ -173,13 +185,35 @@ export async function updateProxyApiService(fastify: FastifyInstance, id: string
   }
 
   const api = await fastify.prisma.proxyApi.update({ where: { id }, data: input as any })
-  return formatProxyApi(api)
+  const formatted = formatProxyApi(api)
+
+  await createActivityLog(fastify, {
+    ctx,
+    action: 'UPDATE',
+    module: 'proxy_api',
+    targetId:   id,
+    targetName: api.name,
+    before: formatProxyApi(existing) as any,
+    after: formatted as any,
+  })
+
+  return formatted
 }
 
-export async function deleteProxyApiService(fastify: FastifyInstance, id: string) {
+export async function deleteProxyApiService(fastify: FastifyInstance, id: string, ctx: ActivityContext) {
   const existing = await fastify.prisma.proxyApi.findUnique({ where: { id } })
   if (!existing) throw new Error('NOT_FOUND')
+
   await fastify.prisma.proxyApi.delete({ where: { id } })
+
+  await createActivityLog(fastify, {
+    ctx,
+    action: 'DELETE',
+    module: 'proxy_api',
+    targetId:   id,
+    targetName: existing.name,
+    before: formatProxyApi(existing) as any,
+  })
 }
 
 // ── API Key CRUD ──
@@ -196,7 +230,7 @@ export async function listApiKeysService(fastify: FastifyInstance) {
   return keys.map(formatApiKey)
 }
 
-export async function createApiKeyService(fastify: FastifyInstance, input: CreateApiKeyInput, userId: string) {
+export async function createApiKeyService(fastify: FastifyInstance, input: CreateApiKeyInput, userId: string, ctx: ActivityContext) {
   const { raw, hash, prefix } = generateApiKey()
 
   const key = await fastify.prisma.apiKey.create({
@@ -210,20 +244,51 @@ export async function createApiKeyService(fastify: FastifyInstance, input: Creat
     },
   })
 
+  await createActivityLog(fastify, {
+    ctx,
+    action: 'CREATE',
+    module: 'api_key',
+    targetId:   key.id,
+    targetName: key.name,
+    after: formatApiKey(key) as any,
+  })
+
   return { ...formatApiKey(key), rawKey: raw }
 }
 
-export async function toggleApiKeyService(fastify: FastifyInstance, id: string, isActive: boolean) {
+export async function toggleApiKeyService(fastify: FastifyInstance, id: string, isActive: boolean, ctx: ActivityContext) {
   const existing = await fastify.prisma.apiKey.findUnique({ where: { id } })
   if (!existing) throw new Error('NOT_FOUND')
+
   const key = await fastify.prisma.apiKey.update({ where: { id }, data: { isActive } })
+
+  await createActivityLog(fastify, {
+    ctx,
+    action: 'UPDATE',
+    module: 'api_key',
+    targetId:   id,
+    targetName: key.name,
+    before: { isActive: existing.isActive },
+    after:  { isActive },
+  })
+
   return formatApiKey(key)
 }
 
-export async function deleteApiKeyService(fastify: FastifyInstance, id: string) {
+export async function deleteApiKeyService(fastify: FastifyInstance, id: string, ctx: ActivityContext) {
   const existing = await fastify.prisma.apiKey.findUnique({ where: { id } })
   if (!existing) throw new Error('NOT_FOUND')
+
   await fastify.prisma.apiKey.delete({ where: { id } })
+
+  await createActivityLog(fastify, {
+    ctx,
+    action: 'DELETE',
+    module: 'api_key',
+    targetId:   id,
+    targetName: existing.name,
+    before: formatApiKey(existing) as any,
+  })
 }
 
 // ── API Call Logs ──

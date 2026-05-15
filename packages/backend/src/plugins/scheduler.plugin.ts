@@ -2,17 +2,20 @@ import fp from 'fastify-plugin'
 import type { FastifyInstance } from 'fastify'
 import * as cron from 'node-cron'
 import type { ScheduledTask } from 'node-cron'
+import { executeTask, type TaskType } from '../modules/scheduled-tasks/task-handlers.js'
 
 async function schedulerPlugin(fastify: FastifyInstance) {
-  const jobs = new Map<string, ScheduledTask>()
+  const maintenanceJobs = new Map<string, ScheduledTask>()
+  const taskJobs = new Map<string, ScheduledTask>()
 
   async function loadAndRegister() {
-    // Stop and destroy all existing jobs
-    for (const job of jobs.values()) {
-      job.stop()
-    }
-    jobs.clear()
+    // Stop all existing jobs
+    for (const job of maintenanceJobs.values()) job.stop()
+    for (const job of taskJobs.values()) job.stop()
+    maintenanceJobs.clear()
+    taskJobs.clear()
 
+    // Load maintenance schedules
     const schedules = await fastify.prisma.maintenanceSchedule.findMany({
       where: { isEnabled: true },
     })
@@ -35,7 +38,6 @@ async function schedulerPlugin(fastify: FastifyInstance) {
           data: { lastRunAt: new Date() },
         })
 
-        // Auto-disable after duration
         setTimeout(async () => {
           fastify.log.info(`Scheduler: deactivating maintenance for "${schedule.name}"`)
           await fastify.prisma.maintenanceStatus.update({
@@ -45,10 +47,27 @@ async function schedulerPlugin(fastify: FastifyInstance) {
         }, schedule.duration * 60 * 1000)
       })
 
-      jobs.set(schedule.id, job)
+      maintenanceJobs.set(schedule.id, job)
     }
 
-    fastify.log.info(`Scheduler: ${jobs.size} cron job(s) registered`)
+    // Load custom scheduled tasks
+    const tasks = await fastify.prisma.scheduledTask.findMany({ where: { isEnabled: true } })
+
+    for (const task of tasks) {
+      if (!cron.validate(task.cronExpression)) {
+        fastify.log.warn(`Invalid cron expression for task "${task.name}": ${task.cronExpression}`)
+        continue
+      }
+
+      const job = cron.schedule(task.cronExpression, async () => {
+        fastify.log.info(`ScheduledTask: running "${task.name}"`)
+        await executeTask(fastify, task.id, task.taskType as TaskType)
+      })
+
+      taskJobs.set(task.id, job)
+    }
+
+    fastify.log.info(`Scheduler: ${maintenanceJobs.size} maintenance + ${taskJobs.size} task job(s) registered`)
   }
 
   fastify.decorate('reloadScheduler', () => {
@@ -60,8 +79,10 @@ async function schedulerPlugin(fastify: FastifyInstance) {
   })
 
   fastify.addHook('onClose', () => {
-    for (const job of jobs.values()) job.stop()
-    jobs.clear()
+    for (const job of maintenanceJobs.values()) job.stop()
+    for (const job of taskJobs.values()) job.stop()
+    maintenanceJobs.clear()
+    taskJobs.clear()
   })
 }
 

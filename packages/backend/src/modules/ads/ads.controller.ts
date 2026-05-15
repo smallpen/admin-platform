@@ -5,6 +5,7 @@ import {
   createAdService, updateAdService, deleteAdService,
 } from './ads.service.js'
 import { ok, paginated, buildPagination, err } from '../../utils/response.js'
+import { extractActivityContext } from '../../utils/activity-log.js'
 
 export async function listAds(request: FastifyRequest, reply: FastifyReply) {
   const parsed = adListQuerySchema.safeParse(request.query)
@@ -34,7 +35,7 @@ export async function createAd(request: FastifyRequest, reply: FastifyReply) {
   const parsed = createAdSchema.safeParse(request.body)
   if (!parsed.success) return reply.status(400).send(err('請求資料格式錯誤', 'VALIDATION_ERROR'))
 
-  const ad = await createAdService(request.server, parsed.data)
+  const ad = await createAdService(request.server, parsed.data, extractActivityContext(request))
   return reply.status(201).send(ok(ad, '廣告建立成功'))
 }
 
@@ -43,7 +44,7 @@ export async function updateAd(request: FastifyRequest<{ Params: { id: string } 
   if (!parsed.success) return reply.status(400).send(err('請求資料格式錯誤', 'VALIDATION_ERROR'))
 
   try {
-    const ad = await updateAdService(request.server, request.params.id, parsed.data)
+    const ad = await updateAdService(request.server, request.params.id, parsed.data, extractActivityContext(request))
     return reply.send(ok(ad, '更新成功'))
   } catch {
     return reply.status(404).send(err('廣告不存在', 'NOT_FOUND'))
@@ -52,7 +53,7 @@ export async function updateAd(request: FastifyRequest<{ Params: { id: string } 
 
 export async function deleteAd(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
   try {
-    await deleteAdService(request.server, request.params.id)
+    await deleteAdService(request.server, request.params.id, extractActivityContext(request))
     return reply.send(ok(null, '刪除成功'))
   } catch {
     return reply.status(404).send(err('廣告不存在', 'NOT_FOUND'))

@@ -13,6 +13,7 @@ import {
   updateScheduleService,
   deleteScheduleService,
 } from './settings.service.js'
+import { extractActivityContext } from '../../utils/activity-log.js'
 
 export async function getMaintenanceStatusController(
   request: FastifyRequest,
@@ -35,7 +36,7 @@ export async function updateMaintenanceStatusController(
   if (!parsed.success) return reply.status(400).send(err('Invalid input', 'VALIDATION_ERROR'))
 
   const activatedBy = request.currentUser?.id
-  const status = await updateMaintenanceStatusService(request.server, parsed.data, activatedBy)
+  const status = await updateMaintenanceStatusService(request.server, parsed.data, activatedBy, extractActivityContext(request))
   return reply.send(ok(status))
 }
 
@@ -54,7 +55,7 @@ export async function createScheduleController(
   const parsed = createScheduleSchema.safeParse(request.body)
   if (!parsed.success) return reply.status(400).send(err('Invalid input', 'VALIDATION_ERROR'))
 
-  const schedule = await createScheduleService(request.server, parsed.data)
+  const schedule = await createScheduleService(request.server, parsed.data, extractActivityContext(request))
   return reply.status(201).send(ok(schedule))
 }
 
@@ -66,7 +67,7 @@ export async function updateScheduleController(
   if (!parsed.success) return reply.status(400).send(err('Invalid input', 'VALIDATION_ERROR'))
 
   try {
-    const schedule = await updateScheduleService(request.server, request.params.id, parsed.data)
+    const schedule = await updateScheduleService(request.server, request.params.id, parsed.data, extractActivityContext(request))
     return reply.send(ok(schedule))
   } catch {
     return reply.status(404).send(err('Schedule not found', 'NOT_FOUND'))
@@ -78,7 +79,7 @@ export async function deleteScheduleController(
   reply: FastifyReply,
 ) {
   try {
-    await deleteScheduleService(request.server, request.params.id)
+    await deleteScheduleService(request.server, request.params.id, extractActivityContext(request))
     return reply.send(ok(null, '排程已刪除'))
   } catch {
     return reply.status(404).send(err('Schedule not found', 'NOT_FOUND'))

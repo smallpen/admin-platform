@@ -15,6 +15,9 @@ import { settingsRoutes } from './modules/settings/settings.route.js'
 import { adsRoutes } from './modules/ads/ads.route.js'
 import { proxyAdminRoutes } from './modules/proxy/proxy-admin.route.js'
 import { proxyExecuteRoutes } from './modules/proxy/proxy-execute.route.js'
+import { activityLogsRoutes } from './modules/activity-logs/activity-logs.route.js'
+import { announcementsRoutes } from './modules/announcements/announcements.route.js'
+import { scheduledTasksRoutes } from './modules/scheduled-tasks/scheduled-tasks.route.js'
 import { config } from './config.js'
 
 export async function buildApp() {
@@ -66,6 +69,9 @@ export async function buildApp() {
   await fastify.register(adsRoutes, { prefix: '/api/v1/ads' })
   await fastify.register(proxyAdminRoutes, { prefix: '/api/v1' })
   await fastify.register(proxyExecuteRoutes, { prefix: '/api/proxy' })
+  await fastify.register(activityLogsRoutes,  { prefix: '/api/v1/activity-logs' })
+  await fastify.register(announcementsRoutes, { prefix: '/api/v1/announcements' })
+  await fastify.register(scheduledTasksRoutes, { prefix: '/api/v1/scheduled-tasks' })
 
   // Health check
   fastify.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }))

@@ -20,8 +20,11 @@ model User {
   createdAt    DateTime   @default(now()) @map("created_at")
   updatedAt    DateTime   @updatedAt @map("updated_at")
 
-  userRoles     UserRole[]
-  refreshTokens RefreshToken[]
+  userRoles            UserRole[]
+  refreshTokens        RefreshToken[]
+  activityLogs         ActivityLog[]
+  announcementsCreated Announcement[]         @relation("AnnouncementCreator")
+  announcementReads    UserAnnouncementRead[]
 
   @@map("users")
 }
@@ -172,6 +175,74 @@ model ApiCallLog {
   @@index([apiId])
   @@index([calledAt])
   @@map("api_call_logs")
+}
+
+model ActivityLog {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  action     String
+  module     String
+  targetId   String?  @map("target_id")
+  targetName String?  @map("target_name") @db.VarChar(500)
+  before     Json?
+  after      Json?
+  ipAddress  String?  @map("ip_address")
+  userAgent  String?  @map("user_agent") @db.Text
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([module])
+  @@index([action])
+  @@index([createdAt])
+  @@map("activity_logs")
+}
+
+model Announcement {
+  id        String    @id @default(cuid())
+  title     String
+  content   String    @db.Text
+  type      String    @default("INFO")
+  status    String    @default("DRAFT")
+  startAt   DateTime? @map("start_at")
+  endAt     DateTime? @map("end_at")
+  createdBy String    @map("created_by")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  creator User                   @relation("AnnouncementCreator", fields: [createdBy], references: [id])
+  reads   UserAnnouncementRead[]
+
+  @@map("announcements")
+}
+
+model UserAnnouncementRead {
+  id             String   @id @default(cuid())
+  userId         String   @map("user_id")
+  announcementId String   @map("announcement_id")
+  readAt         DateTime @default(now()) @map("read_at")
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  announcement Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, announcementId])
+  @@map("user_announcement_reads")
+}
+
+model ScheduledTask {
+  id             String    @id @default(cuid())
+  name           String
+  taskType       String    @map("task_type")
+  cronExpression String    @map("cron_expression")
+  isEnabled      Boolean   @default(false) @map("is_enabled")
+  lastRunAt      DateTime? @map("last_run_at")
+  lastStatus     String?   @map("last_status")
+  lastMessage    String?   @map("last_message") @db.Text
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@map("scheduled_tasks")
 }
 
 model Advertisement {

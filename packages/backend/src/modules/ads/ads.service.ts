@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { toSkipTake } from '../../utils/pagination.js'
+import { createActivityLog, type ActivityContext } from '../../utils/activity-log.js'
 import type { CreateAdInput, UpdateAdInput, AdListQuery } from './ads.schema.js'
 
 function toStartOfDay(dateStr: string): Date {
@@ -80,7 +81,7 @@ export async function getAdImageService(fastify: FastifyInstance, id: string) {
   return ad ? { imageData: ad.imageData as Buffer, mimeType: ad.mimeType } : null
 }
 
-export async function createAdService(fastify: FastifyInstance, input: CreateAdInput) {
+export async function createAdService(fastify: FastifyInstance, input: CreateAdInput, ctx: ActivityContext) {
   const { imageBase64, startDate, endDate, ...rest } = input
   const imageData = Buffer.from(imageBase64, 'base64')
 
@@ -93,10 +94,25 @@ export async function createAdService(fastify: FastifyInstance, input: CreateAdI
     },
   })
 
-  return formatAd(ad)
+  const formatted = formatAd(ad)
+  await createActivityLog(fastify, {
+    ctx,
+    action: 'CREATE',
+    module: 'ads',
+    targetId:   ad.id,
+    targetName: ad.title,
+    after: formatted as any,
+  })
+
+  return formatted
 }
 
-export async function updateAdService(fastify: FastifyInstance, id: string, input: UpdateAdInput) {
+export async function updateAdService(fastify: FastifyInstance, id: string, input: UpdateAdInput, ctx: ActivityContext) {
+  const before = await fastify.prisma.advertisement.findUnique({
+    where: { id },
+    select: { id: true, title: true, mimeType: true, imageName: true, linkUrl: true, duration: true, isActive: true, startDate: true, endDate: true, sortOrder: true },
+  })
+
   const { imageBase64, mimeType, imageName, startDate, endDate, ...rest } = input
 
   const data: any = { ...rest }
@@ -109,9 +125,35 @@ export async function updateAdService(fastify: FastifyInstance, id: string, inpu
   if (endDate !== undefined) data.endDate = toEndOfDay(endDate)
 
   const ad = await fastify.prisma.advertisement.update({ where: { id }, data })
-  return formatAd(ad)
+  const formatted = formatAd(ad)
+
+  await createActivityLog(fastify, {
+    ctx,
+    action: 'UPDATE',
+    module: 'ads',
+    targetId:   id,
+    targetName: ad.title,
+    before: before as any,
+    after: formatted as any,
+  })
+
+  return formatted
 }
 
-export async function deleteAdService(fastify: FastifyInstance, id: string) {
+export async function deleteAdService(fastify: FastifyInstance, id: string, ctx: ActivityContext) {
+  const before = await fastify.prisma.advertisement.findUnique({
+    where: { id },
+    select: { id: true, title: true, mimeType: true, imageName: true, linkUrl: true, duration: true, isActive: true, startDate: true, endDate: true, sortOrder: true },
+  })
+
   await fastify.prisma.advertisement.delete({ where: { id } })
+
+  await createActivityLog(fastify, {
+    ctx,
+    action: 'DELETE',
+    module: 'ads',
+    targetId:   id,
+    targetName: before?.title,
+    before: before as any,
+  })
 }

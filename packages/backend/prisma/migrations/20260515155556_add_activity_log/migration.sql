@@ -1,0 +1,23 @@
+-- CreateTable
+CREATE TABLE `activity_logs` (
+    `id` VARCHAR(191) NOT NULL,
+    `user_id` VARCHAR(191) NOT NULL,
+    `action` VARCHAR(191) NOT NULL,
+    `module` VARCHAR(191) NOT NULL,
+    `target_id` VARCHAR(191) NULL,
+    `target_name` VARCHAR(500) NULL,
+    `before` JSON NULL,
+    `after` JSON NULL,
+    `ip_address` VARCHAR(191) NULL,
+    `user_agent` TEXT NULL,
+    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    INDEX `activity_logs_user_id_idx`(`user_id`),
+    INDEX `activity_logs_module_idx`(`module`),
+    INDEX `activity_logs_action_idx`(`action`),
+    INDEX `activity_logs_created_at_idx`(`created_at`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- AddForeignKey
+ALTER TABLE `activity_logs` ADD CONSTRAINT `activity_logs_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;

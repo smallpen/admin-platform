@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAppStore } from '@/stores/app.store'
 import { useAuthStore } from '@/stores/auth.store'
+import { useAnnouncementsStore } from '@/stores/announcements.store'
 import { useAuth } from '@/composables/useAuth'
 import { useBreakpoint } from '@/composables/useBreakpoint'
 import { ElMessageBox, ElMessage } from 'element-plus'
@@ -12,10 +13,26 @@ const emit = defineEmits<{ (e: 'openMobileMenu'): void }>()
 
 const appStore = useAppStore()
 const authStore = useAuthStore()
+const announcementsStore = useAnnouncementsStore()
 const { logout } = useAuth()
 const { isMobile } = useBreakpoint()
 const { t } = useI18n()
 const route = useRoute()
+const router = useRouter()
+
+const ANN_TYPE_MAP: Record<string, string> = {
+  INFO:    '',
+  WARNING: 'warning',
+  DANGER:  'danger',
+  SUCCESS: 'success',
+}
+
+const ANN_TYPE_LABEL: Record<string, string> = {
+  INFO:    '資訊',
+  WARNING: '警告',
+  DANGER:  '緊急',
+  SUCCESS: '成功',
+}
 
 const breadcrumbs = computed(() =>
   route.matched
@@ -35,6 +52,11 @@ async function handleLogout() {
   })
   await logout()
   ElMessage.success('已成功登出')
+}
+
+function handleCommand(cmd: string) {
+  if (cmd === 'logout') handleLogout()
+  if (cmd === 'profile') router.push('/profile')
 }
 </script>
 
@@ -77,10 +99,61 @@ async function handleLogout() {
         </button>
       </el-tooltip>
 
+      <!-- Announcement bell -->
+      <el-dropdown trigger="click" placement="bottom-end" :teleported="true">
+        <button class="icon-btn bell-btn">
+          <el-icon size="17"><Bell /></el-icon>
+          <span v-if="announcementsStore.unreadCount > 0" class="bell-badge">
+            {{ announcementsStore.unreadCount > 9 ? '9+' : announcementsStore.unreadCount }}
+          </span>
+        </button>
+        <template #dropdown>
+          <div class="ann-dropdown">
+            <div class="ann-header">
+              <span class="ann-header-title">系統公告</span>
+              <el-button
+                v-if="announcementsStore.unreadCount > 0"
+                link
+                size="small"
+                style="font-size:12px"
+                @click.stop="announcementsStore.markAllAsRead()"
+              >
+                全部已讀
+              </el-button>
+            </div>
+            <el-divider style="margin:0" />
+            <div class="ann-list">
+              <div
+                v-if="!announcementsStore.activeAnnouncements.length"
+                class="ann-empty"
+              >
+                暫無公告
+              </div>
+              <div
+                v-for="item in announcementsStore.activeAnnouncements"
+                :key="item.id"
+                class="ann-item"
+                :class="{ 'ann-item--unread': !item.isRead }"
+                @click="announcementsStore.markAsRead(item.id)"
+              >
+                <div class="ann-item-meta">
+                  <el-tag :type="ANN_TYPE_MAP[item.type]" size="small" effect="light" style="flex-shrink:0">
+                    {{ ANN_TYPE_LABEL[item.type] ?? item.type }}
+                  </el-tag>
+                  <span v-if="!item.isRead" class="ann-unread-dot" />
+                </div>
+                <div class="ann-item-title">{{ item.title }}</div>
+                <div class="ann-item-content">{{ item.content }}</div>
+              </div>
+            </div>
+          </div>
+        </template>
+      </el-dropdown>
+
       <div class="header-sep" />
 
       <!-- User dropdown -->
-      <el-dropdown trigger="click" @command="handleLogout">
+      <el-dropdown trigger="click" @command="handleCommand">
         <div class="user-info">
           <div class="avatar">{{ avatarInitial }}</div>
           <span v-if="!isMobile" class="username">{{ authStore.user?.displayName }}</span>
@@ -96,6 +169,10 @@ async function handleLogout() {
               </div>
             </div>
             <el-divider style="margin: 6px 0" />
+            <el-dropdown-item command="profile">
+              <el-icon><User /></el-icon>
+              {{ t('common.nav.profile') }}
+            </el-dropdown-item>
             <el-dropdown-item command="logout">
               <el-icon><SwitchButton /></el-icon>
               {{ t('common.nav.logout') }}
@@ -227,6 +304,98 @@ async function handleLogout() {
 }
 .arrow {
   color: var(--gray-400);
+}
+
+/* Bell button */
+.bell-btn {
+  position: relative;
+}
+.bell-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  background: var(--danger);
+  color: #fff;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* Announcement dropdown */
+.ann-dropdown {
+  width: 300px;
+  max-height: 420px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.ann-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px 8px;
+}
+.ann-header-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-800);
+}
+.ann-list {
+  overflow-y: auto;
+  flex: 1;
+  max-height: 360px;
+}
+.ann-empty {
+  padding: 24px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--gray-400);
+}
+.ann-item {
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-bottom: 1px solid var(--gray-100);
+}
+.ann-item:last-child { border-bottom: none; }
+.ann-item:hover { background: var(--gray-50); }
+.ann-item--unread { background: #f0f4ff; }
+.ann-item--unread:hover { background: #e6edff; }
+.ann-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.ann-unread-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--primary);
+  flex-shrink: 0;
+}
+.ann-item-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-800);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ann-item-content {
+  font-size: 12px;
+  color: var(--gray-500);
+  margin-top: 2px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 /* Dropdown header */

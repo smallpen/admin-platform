@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { hashPassword } from '../../utils/password.js'
 import { toSkipTake } from '../../utils/pagination.js'
+import { createActivityLog, type ActivityContext } from '../../utils/activity-log.js'
 import type { CreateUserInput, UpdateUserInput, UserListQuery } from './users.schema.js'
 
 const USER_INCLUDE = {
@@ -55,7 +56,7 @@ export async function getUserService(fastify: FastifyInstance, id: string) {
   return user ? formatUser(user) : null
 }
 
-export async function createUserService(fastify: FastifyInstance, input: CreateUserInput) {
+export async function createUserService(fastify: FastifyInstance, input: CreateUserInput, ctx: ActivityContext) {
   const existing = await fastify.prisma.user.findFirst({
     where: { OR: [{ username: input.username }, { email: input.email }] },
   })
@@ -77,11 +78,23 @@ export async function createUserService(fastify: FastifyInstance, input: CreateU
     include: USER_INCLUDE,
   })
 
-  return formatUser(user)
+  const formatted = formatUser(user)
+  await createActivityLog(fastify, {
+    ctx,
+    action: 'CREATE',
+    module: 'users',
+    targetId:   user.id,
+    targetName: user.username,
+    after: formatted as any,
+  })
+
+  return formatted
 }
 
-export async function updateUserService(fastify: FastifyInstance, id: string, input: UpdateUserInput) {
+export async function updateUserService(fastify: FastifyInstance, id: string, input: UpdateUserInput, ctx: ActivityContext) {
   const { roleIds, ...data } = input
+
+  const before = await fastify.prisma.user.findUnique({ where: { id }, include: USER_INCLUDE })
 
   const user = await fastify.prisma.user.update({
     where: { id },
@@ -96,30 +109,95 @@ export async function updateUserService(fastify: FastifyInstance, id: string, in
         data: roleIds.map(roleId => ({ userId: id, roleId })),
       })
     }
-    return formatUser(await fastify.prisma.user.findUnique({ where: { id }, include: USER_INCLUDE })!)
+    const updated = await fastify.prisma.user.findUnique({ where: { id }, include: USER_INCLUDE })
+    const formatted = formatUser(updated!)
+    await createActivityLog(fastify, {
+      ctx,
+      action: 'UPDATE',
+      module: 'users',
+      targetId:   id,
+      targetName: user.username,
+      before: before ? formatUser(before) as any : null,
+      after: formatted as any,
+    })
+    return formatted
   }
 
-  return formatUser(user)
+  const formatted = formatUser(user)
+  await createActivityLog(fastify, {
+    ctx,
+    action: 'UPDATE',
+    module: 'users',
+    targetId:   id,
+    targetName: user.username,
+    before: before ? formatUser(before) as any : null,
+    after: formatted as any,
+  })
+  return formatted
 }
 
-export async function deleteUserService(fastify: FastifyInstance, id: string) {
+export async function deleteUserService(fastify: FastifyInstance, id: string, ctx: ActivityContext) {
+  const before = await fastify.prisma.user.findUnique({ where: { id }, include: USER_INCLUDE })
   await fastify.prisma.user.delete({ where: { id } })
+  await createActivityLog(fastify, {
+    ctx,
+    action: 'DELETE',
+    module: 'users',
+    targetId:   id,
+    targetName: before?.username,
+    before: before ? formatUser(before) as any : null,
+  })
 }
 
-export async function updateUserStatusService(fastify: FastifyInstance, id: string, status: 'ACTIVE' | 'INACTIVE' | 'LOCKED') {
-  return fastify.prisma.user.update({ where: { id }, data: { status } })
+export async function updateUserStatusService(fastify: FastifyInstance, id: string, status: 'ACTIVE' | 'INACTIVE' | 'LOCKED', ctx: ActivityContext) {
+  const before = await fastify.prisma.user.findUnique({ where: { id }, select: { username: true, status: true } })
+  await fastify.prisma.user.update({ where: { id }, data: { status } })
+  await createActivityLog(fastify, {
+    ctx,
+    action: 'UPDATE',
+    module: 'users',
+    targetId:   id,
+    targetName: before?.username,
+    before: before ? { status: before.status } : null,
+    after: { status },
+  })
 }
 
-export async function updateUserPasswordService(fastify: FastifyInstance, id: string, newPassword: string) {
+export async function updateUserPasswordService(fastify: FastifyInstance, id: string, newPassword: string, ctx: ActivityContext) {
   const passwordHash = await hashPassword(newPassword)
-  await fastify.prisma.user.update({ where: { id }, data: { passwordHash } })
+  const user = await fastify.prisma.user.update({ where: { id }, data: { passwordHash }, select: { username: true } })
+  await createActivityLog(fastify, {
+    ctx,
+    action: 'UPDATE',
+    module: 'users',
+    targetId:   id,
+    targetName: user.username,
+    after: { passwordChanged: true },
+  })
 }
 
-export async function assignUserRolesService(fastify: FastifyInstance, userId: string, roleIds: string[]) {
+export async function assignUserRolesService(fastify: FastifyInstance, userId: string, roleIds: string[], ctx: ActivityContext) {
+  const before = await fastify.prisma.userRole.findMany({
+    where: { userId },
+    select: { roleId: true },
+  })
+  const beforeRoleIds = before.map(r => r.roleId)
+
   await fastify.prisma.userRole.deleteMany({ where: { userId } })
   if (roleIds.length > 0) {
     await fastify.prisma.userRole.createMany({
       data: roleIds.map(roleId => ({ userId, roleId })),
     })
   }
+
+  const user = await fastify.prisma.user.findUnique({ where: { id: userId }, select: { username: true } })
+  await createActivityLog(fastify, {
+    ctx,
+    action: 'ASSIGN',
+    module: 'users',
+    targetId:   userId,
+    targetName: user?.username,
+    before: { roleIds: beforeRoleIds },
+    after:  { roleIds },
+  })
 }

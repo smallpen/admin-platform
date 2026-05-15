@@ -40,6 +40,16 @@ const PERMISSIONS = [
   { code: 'api_key:delete', name: '刪除 API Key',       group: 'api_key' },
   // API Log module
   { code: 'api_log:list', name: '查看 API 歷程記錄', group: 'api_log' },
+  // Activity Log module
+  { code: 'activity_log:list', name: '查看操作紀錄', group: 'activity_log' },
+  // Announcement module
+  { code: 'announcement:list',   name: '查看公告列表', group: 'announcement' },
+  { code: 'announcement:create', name: '新增公告',     group: 'announcement' },
+  { code: 'announcement:update', name: '編輯公告',     group: 'announcement' },
+  { code: 'announcement:delete', name: '刪除公告',     group: 'announcement' },
+  // Scheduled Task module
+  { code: 'scheduled_task:list',   name: '查看排程任務', group: 'scheduled_task' },
+  { code: 'scheduled_task:update', name: '管理排程任務', group: 'scheduled_task' },
 ]
 
 async function main() {
@@ -121,6 +131,16 @@ async function main() {
     create: { id: 1, isActive: false },
   })
   console.log(`✅ maintenance status initialized`)
+
+  // Create default scheduled tasks
+  await prisma.scheduledTask.createMany({
+    data: [
+      { name: '清除過期 Token',  taskType: 'CLEANUP_EXPIRED_TOKENS', cronExpression: '0 3 * * *', isEnabled: false },
+      { name: '清除舊操作紀錄', taskType: 'CLEANUP_ACTIVITY_LOGS',  cronExpression: '0 2 * * 0', isEnabled: false },
+    ],
+    skipDuplicates: true,
+  })
+  console.log(`✅ default scheduled tasks seeded`)
 
   console.log('🎉 Seed completed!')
 }

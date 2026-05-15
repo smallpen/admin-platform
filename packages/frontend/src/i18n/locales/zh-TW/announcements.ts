@@ -1,0 +1,47 @@
+export default {
+  title: '公告管理',
+  types: {
+    INFO:    '資訊',
+    WARNING: '警告',
+    DANGER:  '緊急',
+    SUCCESS: '成功',
+  },
+  statuses: {
+    DRAFT:     '草稿',
+    PUBLISHED: '已發布',
+    ARCHIVED:  '已封存',
+  },
+  columns: {
+    title:     '標題',
+    type:      '類型',
+    status:    '狀態',
+    startAt:   '生效時間',
+    endAt:     '到期時間',
+    createdBy: '建立者',
+    createdAt: '建立時間',
+  },
+  form: {
+    titleLabel:      '標題',
+    titlePlaceholder: '請輸入公告標題',
+    contentLabel:    '內容',
+    contentPlaceholder: '請輸入公告內容',
+    typeLabel:       '類型',
+    statusLabel:     '狀態',
+    startAtLabel:    '生效時間（選填）',
+    endAtLabel:      '到期時間（選填）',
+    startAtPlaceholder: '不設定則立即生效',
+    endAtPlaceholder:   '不設定則永不到期',
+  },
+  messages: {
+    createSuccess: '公告建立成功',
+    updateSuccess: '公告更新成功',
+    deleteSuccess: '公告已刪除',
+    deleteConfirm: '確定要刪除此公告嗎？',
+  },
+  bell: {
+    title:    '系統公告',
+    markAll:  '全部已讀',
+    empty:    '暫無公告',
+    unread:   '未讀',
+  },
+}

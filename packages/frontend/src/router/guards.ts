@@ -2,6 +2,7 @@ import type { Router } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
 import { usePermissionStore } from '@/stores/permission.store'
 import { useMaintenanceStore } from '@/stores/maintenance.store'
+import { useAnnouncementsStore } from '@/stores/announcements.store'
 import { useAuth } from '@/composables/useAuth'
 
 export function setupGuards(router: Router) {
@@ -43,6 +44,12 @@ export function setupGuards(router: Router) {
 
     if (to.meta.permission && !permStore.has(to.meta.permission as string)) {
       return { name: 'Forbidden' }
+    }
+
+    // Fetch active announcements (non-blocking, once per session)
+    const announcementsStore = useAnnouncementsStore()
+    if (!announcementsStore.hasFetched) {
+      announcementsStore.fetchActive()
     }
 
     return true

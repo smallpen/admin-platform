@@ -6,6 +6,10 @@ import { rolesRoutes } from './routes/roles.routes'
 import { settingsRoutes, maintenancePageRoute } from './routes/settings.routes'
 import { adsRoutes } from './routes/ads.routes'
 import { proxyRoutes } from './routes/proxy.routes'
+import { activityLogsRoutes } from './routes/activity-logs.routes'
+import { profileRoutes } from './routes/profile.routes'
+import { announcementsRoutes } from './routes/announcements.routes'
+import { scheduledTasksRoutes } from './routes/scheduled-tasks.routes'
 import { setupGuards } from './guards'
 
 const router = createRouter({
@@ -23,6 +27,10 @@ const router = createRouter({
         ...settingsRoutes,
         ...adsRoutes,
         ...proxyRoutes,
+        ...activityLogsRoutes,
+        ...profileRoutes,
+        ...announcementsRoutes,
+        ...scheduledTasksRoutes,
       ],
     },
     maintenancePageRoute,

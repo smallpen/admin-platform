@@ -2,27 +2,32 @@
 import { ref, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth.store'
 import { useRouter } from 'vue-router'
-import client from '@/api/client'
+import { statsApi, type StatsData, type TrendsData, type ActionDistributionItem } from '@/api/modules/stats.api'
+import LoginTrendChart from './components/LoginTrendChart.vue'
+import ActionDistributionChart from './components/ActionDistributionChart.vue'
 
 const authStore = useAuthStore()
 const router = useRouter()
 
-interface Stats {
-  userCount: number
-  roleCount: number
-  permissionCount: number
-  activeUserCount: number
-}
-
-const stats = ref<Stats | null>(null)
+const stats = ref<StatsData | null>(null)
+const trendsData = ref<TrendsData>({ labels: [], data: [] })
+const distribution = ref<ActionDistributionItem[]>([])
 const loading = ref(true)
+const chartsLoading = ref(true)
 
 onMounted(async () => {
   try {
-    const { data } = await client.get('/stats')
-    stats.value = data.data
+    const [statsRes, trendsRes, distRes] = await Promise.all([
+      statsApi.getStats(),
+      statsApi.getTrends(),
+      statsApi.getActionDistribution(),
+    ])
+    stats.value = statsRes.data.data
+    trendsData.value = trendsRes.data.data
+    distribution.value = distRes.data.data
   } finally {
     loading.value = false
+    chartsLoading.value = false
   }
 })
 
@@ -98,6 +103,29 @@ const cards = [
           </div>
         </div>
       </template>
+    </div>
+
+    <!-- Charts -->
+    <div class="charts-grid">
+      <el-card>
+        <template #header>
+          <span class="chart-title">近 7 日登入趨勢</span>
+        </template>
+        <LoginTrendChart
+          :labels="trendsData.labels"
+          :data="trendsData.data"
+          :loading="chartsLoading"
+        />
+      </el-card>
+      <el-card>
+        <template #header>
+          <span class="chart-title">近 30 天操作分佈</span>
+        </template>
+        <ActionDistributionChart
+          :data="distribution"
+          :loading="chartsLoading"
+        />
+      </el-card>
     </div>
 
     <!-- Bottom section -->
@@ -258,6 +286,20 @@ const cards = [
 }
 .stat-card.clickable:hover .stat-action {
   gap: 6px;
+}
+
+/* Charts grid */
+.charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 900px) { .charts-grid { grid-template-columns: 1fr; } }
+
+.chart-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gray-800);
 }
 
 /* Bottom grid */

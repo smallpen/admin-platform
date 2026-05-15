@@ -63,5 +63,8 @@ export default {
     apiKeys: 'API KEY 管理',
     apiLogs: 'API 歷程記錄',
     apiDocs: 'API 使用說明',
+    activityLogs:   '操作紀錄',
+    announcements:  '公告管理',
+    scheduledTasks: '排程任務',
   },
 }

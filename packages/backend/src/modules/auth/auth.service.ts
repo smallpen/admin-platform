@@ -1,7 +1,9 @@
 import { randomUUID } from 'crypto'
 import type { FastifyInstance } from 'fastify'
-import { verifyPassword } from '../../utils/password.js'
+import { verifyPassword, hashPassword } from '../../utils/password.js'
 import { config } from '../../config.js'
+import { createActivityLog, type ActivityContext } from '../../utils/activity-log.js'
+import type { UpdateMeInput } from './auth.schema.js'
 
 export async function loginService(fastify: FastifyInstance, username: string, password: string) {
   const user = await fastify.prisma.user.findUnique({
@@ -117,6 +119,80 @@ export async function logoutService(fastify: FastifyInstance, refreshTokenValue:
     where: { token: refreshTokenValue, revokedAt: null },
     data: { revokedAt: new Date() },
   })
+}
+
+export async function updateMeService(
+  fastify: FastifyInstance,
+  userId: string,
+  input: UpdateMeInput,
+  ctx: ActivityContext,
+) {
+  const before = await fastify.prisma.user.findUnique({
+    where: { id: userId },
+    select: { username: true, displayName: true, email: true },
+  })
+  if (!before) return null
+
+  if (input.email && input.email !== before.email) {
+    const existing = await fastify.prisma.user.findFirst({
+      where: { email: input.email, NOT: { id: userId } },
+    })
+    if (existing) throw new Error('EMAIL_CONFLICT')
+  }
+
+  const updated = await fastify.prisma.user.update({
+    where: { id: userId },
+    data: {
+      ...(input.displayName !== undefined && { displayName: input.displayName }),
+      ...(input.email !== undefined && { email: input.email }),
+    },
+  })
+
+  await createActivityLog(fastify, {
+    ctx,
+    action: 'UPDATE',
+    module: 'auth',
+    targetId: userId,
+    targetName: before.username,
+    before: { displayName: before.displayName, email: before.email },
+    after: { displayName: updated.displayName, email: updated.email },
+  })
+
+  return getMeService(fastify, userId)
+}
+
+export async function updateMyPasswordService(
+  fastify: FastifyInstance,
+  userId: string,
+  currentPassword: string,
+  newPassword: string,
+  ctx: ActivityContext,
+) {
+  const user = await fastify.prisma.user.findUnique({
+    where: { id: userId },
+    select: { passwordHash: true, username: true },
+  })
+  if (!user) return false
+
+  const valid = await verifyPassword(currentPassword, user.passwordHash)
+  if (!valid) throw new Error('INVALID_CURRENT_PASSWORD')
+
+  const newHash = await hashPassword(newPassword)
+  await fastify.prisma.user.update({
+    where: { id: userId },
+    data: { passwordHash: newHash },
+  })
+
+  await createActivityLog(fastify, {
+    ctx,
+    action: 'UPDATE',
+    module: 'auth',
+    targetId: userId,
+    targetName: user.username,
+    after: { passwordChanged: true },
+  })
+
+  return true
 }
 
 export async function getMeService(fastify: FastifyInstance, userId: string) {
