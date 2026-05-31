@@ -12,6 +12,8 @@ services:
       --character-set-server=utf8mb4
       --collation-server=utf8mb4_unicode_ci
       --max-allowed-packet=67108864
+    ports:
+      - "3306:3306"
     volumes:
       - mysql-data:/var/lib/mysql
     networks:
@@ -61,10 +63,21 @@ services:
     container_name: admin-frontend
     restart: unless-stopped
     ports:
-      - "${HTTP_PORT:-80}:80"
+      - "3001:80"
     depends_on:
       backend:
         condition: service_healthy
+    networks:
+      - app-network
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: admin-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./static:/usr/share/nginx/html:ro
     networks:
       - app-network
 
