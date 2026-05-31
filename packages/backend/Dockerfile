@@ -53,4 +53,5 @@ EXPOSE 3001
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["sh", "-c", \
   "node_modules/.bin/prisma migrate deploy --schema=packages/backend/prisma/schema.prisma && \
+   node packages/backend/dist/seed.js && \
    node packages/backend/dist/main.js"]
