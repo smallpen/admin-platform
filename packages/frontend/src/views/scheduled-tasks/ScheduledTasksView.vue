@@ -100,7 +100,8 @@ const TASK_TYPE_LABEL: Record<string, string> = {
   CLEANUP_ACTIVITY_LOGS:  t('scheduledTasks.taskTypes.CLEANUP_ACTIVITY_LOGS'),
 }
 
-const STATUS_TYPE: Record<string, string> = {
+type ElTagType = 'primary' | 'success' | 'info' | 'warning' | 'danger'
+const STATUS_TYPE: Partial<Record<string, ElTagType>> = {
   SUCCESS: 'success',
   FAILED:  'danger',
   RUNNING: 'warning',

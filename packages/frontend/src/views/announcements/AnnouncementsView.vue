@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { EditPen, Delete, Plus } from '@element-plus/icons-vue'
 import type { Component } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -14,7 +14,7 @@ const { t } = useI18n()
 const filters = reactive({ keyword: '', type: '', status: '' })
 
 // ── BaseTable ref ─────────────────────────────────
-const tableRef = ref<InstanceType<typeof BaseTable>>()
+const tableRef = ref<{ load: () => void } | null>(null)
 
 async function fetchAnnouncements(params: any) {
   const query = {
@@ -45,8 +45,9 @@ const columns: TableColumn[] = [
   { field: 'createdAt', title: t('announcements.columns.createdAt'), width: 160, slotName: 'createdAt' },
 ]
 
-const TYPE_TAG: Record<string, string> = { INFO: '', WARNING: 'warning', DANGER: 'danger', SUCCESS: 'success' }
-const STATUS_TAG: Record<string, string> = { DRAFT: 'info', PUBLISHED: 'success', ARCHIVED: '' }
+type ElTagType = 'primary' | 'success' | 'info' | 'warning' | 'danger'
+const TYPE_TAG: Partial<Record<string, ElTagType>> = { WARNING: 'warning', DANGER: 'danger', SUCCESS: 'success' }
+const STATUS_TAG: Partial<Record<string, ElTagType>> = { DRAFT: 'info', PUBLISHED: 'success' }
 
 // ── Actions ───────────────────────────────────────
 const actions: TableAction<Announcement>[] = [

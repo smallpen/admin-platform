@@ -20,8 +20,9 @@ const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 
-const ANN_TYPE_MAP: Record<string, string> = {
-  INFO:    '',
+type ElTagType = 'primary' | 'success' | 'info' | 'warning' | 'danger'
+
+const ANN_TYPE_MAP: Partial<Record<string, ElTagType>> = {
   WARNING: 'warning',
   DANGER:  'danger',
   SUCCESS: 'success',

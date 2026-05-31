@@ -33,7 +33,7 @@ onMounted(async () => {
 
 const cards = [
   {
-    key: 'userCount' as keyof Stats,
+    key: 'userCount' as keyof StatsData,
     label: '使用者總數',
     icon: 'User',
     gradient: 'linear-gradient(135deg, #4F6AF5 0%, #7C91F8 100%)',
@@ -41,7 +41,7 @@ const cards = [
     action: { label: '管理使用者', path: '/users' },
   },
   {
-    key: 'roleCount' as keyof Stats,
+    key: 'roleCount' as keyof StatsData,
     label: '角色數量',
     icon: 'Lock',
     gradient: 'linear-gradient(135deg, #8B5CF6 0%, #A78BFA 100%)',
@@ -49,7 +49,7 @@ const cards = [
     action: { label: '管理角色', path: '/roles' },
   },
   {
-    key: 'permissionCount' as keyof Stats,
+    key: 'permissionCount' as keyof StatsData,
     label: '權限項目',
     icon: 'Key',
     gradient: 'linear-gradient(135deg, #F59E0B 0%, #FCD34D 100%)',
@@ -57,7 +57,7 @@ const cards = [
     action: { label: '管理權限', path: '/permissions' },
   },
   {
-    key: 'activeUserCount' as keyof Stats,
+    key: 'activeUserCount' as keyof StatsData,
     label: '啟用中使用者',
     icon: 'CircleCheck',
     gradient: 'linear-gradient(135deg, #22C55E 0%, #4ADE80 100%)',
