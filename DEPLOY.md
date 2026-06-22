@@ -1,32 +1,45 @@
 # Docker 部署指南
 
-本系統採用 Docker Compose 進行容器化部署，包含三個服務：
+本系統採用 Docker Compose 進行容器化部署，包含五個服務：
 
 | 容器 | 說明 |
 |------|------|
-| `admin-mysql`    | MySQL 8.0 資料庫伺服器 |
+| `admin-caddy`    | Caddy reverse proxy，TLS 終端，自動申請 Let's Encrypt 憑證 |
+| `admin-nginx`    | Nginx 靜態網站伺服器（`www.yourdomain.com`） |
+| `admin-frontend` | Nginx 靜態伺服器，提供 Vue 3 後台 + 反向代理 API（`admin.yourdomain.com`） |
 | `admin-backend`  | Node.js (Fastify) API 伺服器 |
-| `admin-frontend` | Nginx 靜態伺服器，提供 Vue 3 前端 + 反向代理 API |
+| `admin-mysql`    | MySQL 8.0 資料庫伺服器 |
 
-資料庫（MySQL 8.0）透過 Docker Volume `mysql-data` 持久化儲存。
+憑證存於 Docker Volume `caddy_data`，資料庫存於 `mysql-data`。
 
 ```
-Internet
-   │
-   ▼ :80
-┌──────────────────┐
-│  admin-frontend  │  (Nginx)
-│  /api/* → proxy  │
-└────────┬─────────┘
-         │ :3001
-┌────────▼─────────┐
-│  admin-backend   │  (Fastify)
-└────────┬─────────┘
-         │ :3306
-┌────────▼─────────┐
-│  admin-mysql     │  (MySQL 8.0)
-│  mysql-data vol  │──── Volume: mysql-data
-└──────────────────┘
+Internet :80 / :443
+         │
+         ▼
+┌─────────────────────────────────────┐
+│            admin-caddy              │  HTTP → HTTPS redirect
+│         (Caddy 2, TLS)              │  Let's Encrypt 自動憑證
+└──────────┬──────────────────┬───────┘
+           │ www.*            │ admin.*
+           ▼                  ▼
+┌──────────────────┐ ┌──────────────────────┐
+│   admin-nginx    │ │    admin-frontend    │
+│  (靜態網站)      │ │  (Vue 3 後台, Nginx) │
+│                  │ │  /api/* → proxy      │
+└──────────────────┘ └──────────┬───────────┘
+                                │ :3001
+                     ┌──────────▼───────────┐
+                     │    admin-backend     │
+                     │  (Fastify API)       │
+                     └──────────┬───────────┘
+                                │ :3306
+                     ┌──────────▼───────────┐
+                     │    admin-mysql       │
+                     │  (MySQL 8.0)         │
+                     │  mysql-data vol ─────┼──── Volume: mysql-data
+                     └──────────────────────┘
+
+Volumes: caddy_data (TLS 憑證), caddy_config, mysql-data
 ```
 
 ---
