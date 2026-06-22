@@ -1,6 +1,6 @@
 # Docker 部署指南
 
-本系統採用 Docker Compose 進行容器化部署，包含五個服務：
+本系統採用 Docker Compose 進行容器化部署，包含六個服務：
 
 | 容器 | 說明 |
 |------|------|
@@ -9,10 +9,14 @@
 | `admin-frontend` | Nginx 靜態伺服器，提供 Vue 3 後台 + 反向代理 API（`admin.yourdomain.com`） |
 | `admin-backend`  | Node.js (Fastify) API 伺服器 |
 | `admin-mysql`    | MySQL 8.0 資料庫伺服器 |
+| `admin-webhook`  | CI/CD webhook 接收器，接收 GitHub Actions 部署觸發訊號 |
 
 憑證存於 Docker Volume `caddy_data`，資料庫存於 `mysql-data`。
 
 ```
+GitHub Actions (push to main)
+         │ POST /hooks/deploy (HMAC-SHA256)
+         │
 Internet :80 / :443
          │
          ▼
@@ -26,18 +30,19 @@ Internet :80 / :443
 │   admin-nginx    │ │    admin-frontend    │
 │  (靜態網站)      │ │  (Vue 3 後台, Nginx) │
 │                  │ │  /api/* → proxy      │
-└──────────────────┘ └──────────┬───────────┘
-                                │ :3001
-                     ┌──────────▼───────────┐
-                     │    admin-backend     │
-                     │  (Fastify API)       │
-                     └──────────┬───────────┘
-                                │ :3306
-                     ┌──────────▼───────────┐
-                     │    admin-mysql       │
-                     │  (MySQL 8.0)         │
-                     │  mysql-data vol ─────┼──── Volume: mysql-data
-                     └──────────────────────┘
+│                  │ │  /hooks/* → webhook  │
+└──────────────────┘ └──────┬───────┬───────┘
+                            │ :3001  │ :9000
+               ┌────────────▼─┐  ┌──▼──────────────────┐
+               │ admin-backend│  │   admin-webhook      │
+               │ (Fastify API)│  │   驗證簽章後執行     │
+               └──────┬───────┘  │   git pull +         │
+                      │ :3306    │   docker compose up  │
+               ┌──────▼───────┐  └──────────────────────┘
+               │  admin-mysql │
+               │  (MySQL 8.0) │
+               │  mysql-data ─┼──── Volume: mysql-data
+               └──────────────┘
 
 Volumes: caddy_data (TLS 憑證), caddy_config, mysql-data
 ```
@@ -185,10 +190,12 @@ http://your-server-ip
 | `MYSQL_PASSWORD` | ✅ | — | MySQL admin 使用者密碼 |
 | `JWT_ACCESS_SECRET` | ✅ | — | Access Token 簽署密鑰（最少 32 字元）|
 | `JWT_REFRESH_SECRET` | ✅ | — | Refresh Token 簽署密鑰（最少 32 字元）|
-| `CORS_ORIGIN` | ✅ | `http://localhost` | 允許的前端來源 URL |
+| `CORS_ORIGIN` | ✅ | `http://localhost` | 允許的前端來源 URL，需與 `DOMAIN_ADMIN` 一致 |
+| `DOMAIN_STATIC` | ✅ | — | 靜態網站網域（`www.yourdomain.com`） |
+| `DOMAIN_ADMIN` | ✅ | — | 後台管理系統網域（`admin.yourdomain.com`） |
+| `WEBHOOK_SECRET` | ✅ | — | CI/CD webhook 驗證密鑰，需與 GitHub Actions secret 一致 |
 | `JWT_ACCESS_EXPIRES_IN` | | `15m` | Access Token 效期 |
 | `JWT_REFRESH_EXPIRES_IN` | | `7d` | Refresh Token 效期 |
-| `HTTP_PORT` | | `80` | 前端對外 HTTP port |
 
 ---
 
@@ -237,7 +244,9 @@ docker compose down -v
 
 ## 五、更新部署
 
-當程式碼有更新時：
+本系統已設定 CI/CD 自動部署（見第八節），**正常情況下只需 push 到 main，伺服器會自動更新**。
+
+若需手動更新（例如 CI/CD 未設定或緊急修復）：
 
 ```bash
 # 1. 拉取最新程式碼
@@ -295,6 +304,7 @@ crontab -e
 ---
 
 ## 七、SSL / HTTPS 設定（Caddy 自動憑證）
+
 
 本系統使用 **Caddy** 作為 TLS 終端與反向代理，憑證由 Let's Encrypt 自動申請與續期，**不需在主機安裝任何額外軟體**。
 
@@ -407,7 +417,94 @@ docker volume ls | grep caddy_data
 
 ---
 
-## 八、常見問題排查
+## 八、CI/CD 自動部署設定
+
+本系統使用 GitHub Actions + Webhook 實現自動部署：
+
+```
+push to main
+    │
+    ▼
+GitHub Actions CI（type-check + build）
+    │ 通過後
+    ▼
+POST https://admin.yourdomain.com/hooks/deploy
+（附 HMAC-SHA256 簽章）
+    │
+    ▼
+admin-webhook container 驗證簽章
+    │ 通過後
+    ▼
+git pull origin main → docker compose up -d --build
+```
+
+### 8.1 產生 Webhook Secret
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+將輸出的字串記下來，接下來兩個地方都需要用到同一個值。
+
+### 8.2 伺服器 .env 設定
+
+在伺服器的 `.env` 加入：
+
+```dotenv
+WEBHOOK_SECRET=<上面產生的字串>
+```
+
+重新部署讓 webhook container 套用新設定：
+
+```bash
+docker compose up -d --build webhook
+```
+
+### 8.3 設定 GitHub Actions Secrets
+
+前往 GitHub repo → **Settings → Secrets and variables → Actions**，新增兩個 secret：
+
+| Secret 名稱 | 值 |
+|------------|-----|
+| `WEBHOOK_SECRET` | 與伺服器 `.env` 相同的字串 |
+| `WEBHOOK_URL` | `https://admin.yourdomain.com/hooks/deploy` |
+
+### 8.4 驗證 CI/CD 運作
+
+推送任何 commit 到 `main` 後：
+
+```bash
+# 確認 GitHub Actions 通過
+# https://github.com/smallpen/admin-platform/actions
+
+# 查看 webhook container 的執行日誌
+docker compose logs -f webhook
+```
+
+成功部署時，webhook 日誌應出現：
+
+```
+[2026-01-01 12:00:00] === Deploy started ===
+[2026-01-01 12:00:01] git pull...
+[2026-01-01 12:00:03] docker compose up --build...
+[2026-01-01 12:00:45] === Deploy complete ===
+```
+
+### 8.5 手動觸發部署（測試用）
+
+```bash
+PAYLOAD='{}'
+SIG=$(printf '%s' "$PAYLOAD" | openssl dgst -sha256 -hmac "your-webhook-secret" | awk '{print $NF}')
+curl -fsS -X POST \
+  -H "Content-Type: application/json" \
+  -H "X-Hub-Signature-256: sha256=$SIG" \
+  -d "$PAYLOAD" \
+  https://admin.yourdomain.com/hooks/deploy
+```
+
+---
+
+## 九、常見問題排查
 
 ### 容器無法啟動
 
