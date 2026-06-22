@@ -281,61 +281,116 @@ crontab -e
 
 ---
 
-## 七、SSL / HTTPS 設定（Let's Encrypt）
+## 七、SSL / HTTPS 設定（Caddy 自動憑證）
 
-若你有正式 domain，可以用 Certbot + Nginx 加上 HTTPS。
+本系統使用 **Caddy** 作為 TLS 終端與反向代理，憑證由 Let's Encrypt 自動申請與續期，**不需在主機安裝任何額外軟體**。
 
-### 7.1 安裝 Certbot
+架構說明：
+
+```
+Internet :80/:443
+     │
+     ▼
+┌─────────────────┐
+│  admin-caddy    │  根據 hostname 路由
+│  (:80 → :443)   │  自動申請 TLS 憑證
+└────┬────────┬───┘
+     │        │
+     ▼        ▼
+┌─────────┐ ┌──────────────┐
+│ admin-  │ │ admin-       │
+│ nginx   │ │ frontend     │
+│ 靜態網站│ │ 後台 + API   │
+└─────────┘ └──────┬───────┘
+                   │ /api/*
+              ┌────▼─────┐
+              │ admin-   │
+              │ backend  │
+              └──────────┘
+```
+
+網域對應關係：
+
+| 網域 | 服務 |
+|------|------|
+| `www.yourdomain.com` | 靜態網站（`admin-nginx`） |
+| `admin.yourdomain.com` | 後台管理系統（`admin-frontend`） |
+
+### 7.1 DNS 設定
+
+在你的 DNS 服務商新增兩筆 A record，都指向同一台伺服器 IP：
+
+```
+www.yourdomain.com   →  your-server-ip
+admin.yourdomain.com →  your-server-ip
+```
+
+> ⚠️ DNS 生效需要數分鐘至數小時，部署前請先確認 `ping www.yourdomain.com` 能解析到正確 IP。
+
+### 7.2 確認防火牆開放
+
+伺服器的 80 與 443 port 必須對外開放（Caddy 申請憑證時需要 HTTP-01 challenge）：
 
 ```bash
-sudo apt install -y certbot python3-certbot-nginx
+# Ubuntu / Debian（ufw）
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw reload
+
+# 確認狀態
+sudo ufw status
 ```
 
-### 7.2 在主機安裝 Nginx（作為外層 reverse proxy）
+### 7.3 設定 .env
 
-```bash
-sudo apt install -y nginx
-```
-
-建立設定 `/etc/nginx/sites-available/admin-platform`：
-
-```nginx
-server {
-    listen 80;
-    server_name your-domain.com;
-    location / {
-        proxy_pass http://127.0.0.1:80;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-```
-
-```bash
-sudo ln -s /etc/nginx/sites-available/admin-platform /etc/nginx/sites-enabled/
-sudo nginx -t && sudo systemctl reload nginx
-```
-
-### 7.3 申請憑證
-
-```bash
-sudo certbot --nginx -d your-domain.com
-```
-
-完成後更新 `.env`：
+編輯 `.env`，填入實際網域，並更新 CORS：
 
 ```dotenv
-CORS_ORIGIN=https://your-domain.com
-HTTP_PORT=8080   # 改成非 80，讓主機 Nginx 佔用 80/443
+# 靜態網站網域
+DOMAIN_STATIC=www.yourdomain.com
+
+# 後台管理系統網域
+DOMAIN_ADMIN=admin.yourdomain.com
+
+# CORS 必須與 DOMAIN_ADMIN 一致（https）
+CORS_ORIGIN=https://admin.yourdomain.com
 ```
 
-重新部署：
+### 7.4 部署
 
 ```bash
 docker compose up -d --build
 ```
+
+Caddy 啟動後約 10~30 秒內自動完成憑證申請。之後所有 HTTP 訪問都會自動 301 redirect 到 HTTPS。
+
+### 7.5 驗證
+
+```bash
+# 確認憑證已申請成功
+curl -I https://admin.yourdomain.com/api/v1/health
+
+# 查看 Caddy 日誌（憑證申請過程）
+docker compose logs -f caddy
+```
+
+預期看到類似以下訊息代表憑證申請成功：
+
+```
+obtained certificate   www.yourdomain.com
+obtained certificate   admin.yourdomain.com
+```
+
+### 7.6 憑證持久化
+
+憑證存放於 Docker volume `caddy_data`，容器重啟或重新部署後不需重新申請：
+
+```bash
+# 確認 volume 存在
+docker volume ls | grep caddy_data
+```
+
+> ⚠️ 執行 `docker compose down -v` 會刪除 `caddy_data`，下次啟動將重新申請憑證（Let's Encrypt 有每週申請上限，請避免頻繁刪除）。
 
 ---
 
@@ -369,13 +424,16 @@ docker compose exec mysql mysqladmin ping -h 127.0.0.1 -u admin --password=$MYSQ
 
 ### Port 衝突
 
-```bash
-# 檢查 80 port 使用狀況
-sudo lsof -i :80
+80 / 443 port 由 `admin-caddy` container 佔用。若主機上已有其他服務（如 Nginx、Apache）使用這兩個 port，需先停用：
 
-# 改用其他 port（修改 .env）
-HTTP_PORT=8080
-docker compose up -d
+```bash
+# 檢查佔用狀況
+sudo lsof -i :80
+sudo lsof -i :443
+
+# 停用主機 Nginx（若有）
+sudo systemctl stop nginx
+sudo systemctl disable nginx
 ```
 
 ### 資料庫完整性檢查

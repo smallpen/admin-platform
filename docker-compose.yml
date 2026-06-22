@@ -62,8 +62,6 @@ services:
         VITE_API_BASE_URL: /api/v1
     container_name: admin-frontend
     restart: unless-stopped
-    ports:
-      - "3001:80"
     depends_on:
       backend:
         condition: service_healthy
@@ -74,15 +72,37 @@ services:
     image: nginx:1.27-alpine
     container_name: admin-nginx
     restart: unless-stopped
-    ports:
-      - "80:80"
     volumes:
       - ./static:/usr/share/nginx/html:ro
     networks:
       - app-network
 
+  caddy:
+    image: caddy:2-alpine
+    container_name: admin-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN_STATIC: ${DOMAIN_STATIC}
+      DOMAIN_ADMIN:  ${DOMAIN_ADMIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - nginx
+      - frontend
+    networks:
+      - app-network
+
 volumes:
   mysql-data:
+    driver: local
+  caddy_data:
+    driver: local
+  caddy_config:
     driver: local
 
 networks:

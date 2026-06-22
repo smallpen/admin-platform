@@ -1,0 +1,11 @@
+# 靜態網站
+{$DOMAIN_STATIC} {
+    encode gzip
+    reverse_proxy nginx:80
+}
+
+# 後台管理系統
+{$DOMAIN_ADMIN} {
+    encode gzip
+    reverse_proxy frontend:80
+}
