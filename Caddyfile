@@ -20,5 +20,11 @@
 {$DOMAIN_ADMIN} {
     encode gzip
     import security_headers
+
+    # CI/CD webhook 端點（僅接受 POST）
+    route /hooks/* {
+        reverse_proxy webhook:9000
+    }
+
     reverse_proxy frontend:80
 }

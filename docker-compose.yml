@@ -115,6 +115,26 @@ services:
       retries: 3
       start_period: 30s
 
+  webhook:
+    build:
+      context: .
+      dockerfile: packages/webhook/Dockerfile
+    container_name: admin-webhook
+    restart: unless-stopped
+    environment:
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - .:/project
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9000/hooks/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
 volumes:
   mysql-data:
     driver: local

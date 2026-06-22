@@ -1,0 +1,21 @@
+[
+  {
+    "id": "deploy",
+    "execute-command": "/hooks/deploy.sh",
+    "command-working-directory": "/project",
+    "response-message": "Deployment triggered.",
+    "response-headers": [
+      { "name": "Content-Type", "value": "text/plain" }
+    ],
+    "trigger-rule": {
+      "match": {
+        "type": "payload-hmac-sha256",
+        "secret": "__WEBHOOK_SECRET__",
+        "parameter": {
+          "source": "header",
+          "name": "X-Hub-Signature-256"
+        }
+      }
+    }
+  }
+]
