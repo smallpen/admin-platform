@@ -1,11 +1,24 @@
+# 共用安全 header snippet
+(security_headers) {
+    header {
+        X-Content-Type-Options  "nosniff"
+        X-Frame-Options         "SAMEORIGIN"
+        Referrer-Policy         "strict-origin-when-cross-origin"
+        X-XSS-Protection        "1; mode=block"
+        -Server
+    }
+}
+
 # 靜態網站
 {$DOMAIN_STATIC} {
     encode gzip
+    import security_headers
     reverse_proxy nginx:80
 }
 
 # 後台管理系統
 {$DOMAIN_ADMIN} {
     encode gzip
+    import security_headers
     reverse_proxy frontend:80
 }
